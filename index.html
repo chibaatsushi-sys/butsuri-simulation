@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>物理シミュレーション集</title>
+<style>
+  :root{
+    color-scheme: light;
+    --surface:#fcfcfb; --card:#ffffff; --border:#e4e3df;
+    --text-1:#0b0b0b; --text-2:#52514e; --text-3:#8a8983;
+    --blue:#2a78d6; --orange:#eb6834; --violet:#4a3aa7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      color-scheme: dark;
+      --surface:#1a1a19; --card:#232322; --border:#3a3936;
+      --text-1:#ffffff; --text-2:#c3c2b7; --text-3:#8a8983;
+      --blue:#3987e5; --orange:#d95926; --violet:#9085e9;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--surface); color:var(--text-1);
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:28px 16px 48px;}
+  h1{font-size:24px; margin:0 0 4px;}
+  .sub{color:var(--text-2); font-size:13.5px; margin-bottom:22px;}
+  a.simcard{
+    display:block; text-decoration:none; color:inherit;
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:18px 20px; margin-bottom:16px;
+    transition: box-shadow .15s, transform .15s, border-color .15s;
+  }
+  a.simcard:hover{ box-shadow:0 4px 16px rgba(0,0,0,.10); transform:translateY(-2px); border-color:var(--text-3); }
+  a.simcard:active{ transform:translateY(0); }
+  .simtitle{font-size:17px; font-weight:700; margin:0 0 6px; display:flex; align-items:center; gap:10px;}
+  .badge{
+    flex:0 0 auto; width:38px; height:38px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center; font-size:21px; color:#fff;
+  }
+  .desc{font-size:13.5px; color:var(--text-2); margin:0;}
+  .go{margin-top:10px; font-size:13px; font-weight:600;}
+  .go.blue{color:var(--blue);} .go.orange{color:var(--orange);}
+  .note{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:12px 16px; font-size:12.5px; color:var(--text-2); margin-top:22px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>物理シミュレーション集</h1>
+  <div class="sub">見たいシミュレーションをタップ(クリック)してください。インストール不要・オフラインでも動きます。</div>
+
+  <a class="simcard" href="円筒面の円運動シミュレーション.html">
+    <p class="simtitle"><span class="badge" style="background:var(--blue)"><svg width="28" height="28" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="19" r="13" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="10.5" cy="27" r="4" fill="#fff"/><path d="M 27 8.5 L 32.5 10.5 L 29.5 15" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="36" x2="36" y2="36" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/></svg></span>円運動する車のシミュレーション</p>
+    <p class="desc">円筒面を昇る車が、最高点まで昇って宙返りできる条件を実験できる。初速度 v₀ = √(〇×gR) の〇を変えて、「v = 0 で逆戻り」「N = 0 で面から離れて放物運動」「一周成功」の3パターンを、N–α・v–α グラフと連動して観察しよう。</p>
+    <p class="go blue">▶ ひらく</p>
+  </a>
+
+  <a class="simcard" href="ばねで打ち出される小球のシミュレーション.html">
+    <p class="simtitle"><span class="badge" style="background:var(--orange)"><svg width="28" height="28" viewBox="0 0 40 40" aria-hidden="true"><line x1="37" y1="8" x2="37" y2="26" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><polyline points="37,17 33,17 31,11 27,23 23,11 19,23 16,17 13.5,17" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="9" cy="17" r="4.2" fill="#fff"/><path d="M 12 31 L 4 31 M 7 28.5 L 4 31 L 7 33.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><line x1="4" y1="36" x2="36" y2="36" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/></svg></span>ばねで打ち出される小球のシミュレーション</p>
+    <p class="desc">ばねを l だけ縮めて放すと、小球は単振動しながら加速し、自然長の位置(t = T/4)でばねから離れて等速直線運動をする。小球をドラッグして縮みを変えたり、x-t / v-t / a-t グラフや「もしも離れなかったら」モードで単振動と比較したりできる。</p>
+    <p class="go orange">▶ ひらく</p>
+  </a>
+
+  <div class="note">
+    うまく表示されないときは、ブラウザ(Chrome / Edge / Safari)で開き直してください。スマホでも動きますが、パソコンやタブレットの画面のほうが操作しやすいです。
+  </div>
+</div>
+</body>
+</html>
