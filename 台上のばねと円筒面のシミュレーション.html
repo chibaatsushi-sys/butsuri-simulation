@@ -134,7 +134,7 @@
   <div class="card">
     <div class="controls">
       <div class="ctl"><label>小球Cの質量 m [kg]</label><input id="mIn" type="number" value="1" min="0.2" max="3" step="0.1"></div>
-      <div class="ctl"><label>台Bの質量 M [kg]</label><input id="MIn" type="number" value="2" min="0.5" max="10" step="0.5"></div>
+      <div class="ctl"><label>台Bの質量 M [kg]</label><input id="MIn" type="number" value="1" min="0.5" max="10" step="0.5"></div>
       <div class="ctl"><label>ばね定数 k [N/m]</label><input id="kIn" type="number" value="100" min="20" max="300" step="10"></div>
       <div class="ctl"><label>縮み l [m]</label><input id="lIn" type="number" value="0.20" min="0.02" max="0.45" step="0.01"></div>
       <div class="ctl"><label>再生速度 <span id="spdVal">0.25</span>×</label><input id="spdIn" type="range" min="0.05" max="1" step="0.05" value="0.25" style="width:150px;"></div>
@@ -190,8 +190,8 @@
 
   <div class="card" style="margin-top:12px;">
     <p class="gtitle">
-      <span class="chip" style="background:var(--series-v)"></span>小球Cの速さ(床Aから見た値)
-      <span id="legB" style="display:none;">&nbsp;&nbsp;<span class="chip" style="background:var(--spring)"></span>台Bの速度(床Aから見た \(x\) 成分)</span>
+      <span class="chip" style="background:var(--series-v)"></span><span id="legC">小球Cの速さ(床Aから見た値)</span>
+      <span id="legB" style="display:none;">&nbsp;&nbsp;<span class="chip" style="background:var(--spring)"></span>台Bの速度(床Aから見た \(x\) 成分)</span><span id="legG" style="display:none;">&nbsp;&nbsp;<span class="chip" style="background:var(--good)"></span>重心の速度(一定!)</span>
       &nbsp;— 時間のグラフ
     </p>
     <canvas id="gV"></canvas>
@@ -243,7 +243,7 @@
 
   // ================= 状態 =================
   const S = {
-    m:1, M:2, k:100, l:0.20,
+    m:1, M:1, k:100, l:0.20,
     mode:'fixed',            // fixed / free
     stick:false,             // true: ばねから離れない(単振動を続ける)
     view:'ground',           // ground: 静止系 / cart: 台B上の観測者
@@ -259,7 +259,7 @@
     XB:0, vB:0, c:0,
     ev:{rel:false, v0:0, w0:0, qr:false, vqr:0, tStop:null, outcome:null, outText:''},
     trail:[],
-    data:{t:[], vc:[], vb:[]},
+    data:{t:[], vc:[], vb:[], vg:[]},
   };
   const $ = id => document.getElementById(id);
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -463,6 +463,14 @@
     b.textContent = '台Bが静止した! このとき小球Cは 点T(φ=90°)にいて、鉛直上向きに運動している ― 水平方向の運動量の和が常に 0 だから(問2(h))';
   }
 
+  // C の x方向速度(床Aから見た符号つき)
+  function vcxNow(){
+    if (S.phase==='spring'){ const st=springState(S.t-S.sp.t0); return S.vB+st.cdot; }
+    if (S.phase==='track'){ const T=trk(S.tr.s); return S.vB+T.tx*S.tr.w; }
+    if (S.phase==='projectile'||S.phase==='landed') return S.pj.vx;
+    return 0;
+  }
+
   // ================= 現在の観測値 =================
   function current(){
     const a = alpha();
@@ -569,6 +577,23 @@
     }
     ctx.fillStyle=css('--text-1'); ctx.font='bold 13px sans-serif';
     ctx.fillText(S.view==='cart' ? '床 A(動いて見える)' : '床 A', W-(S.view==='cart'?128:52), gY+22);
+    if (S.view==='cart'){
+      // 床に付けた目印の点が流れる
+      ctx.fillStyle = css('--text-3');
+      const sp2 = 58, off2 = ((vOff*SCALE)%sp2+sp2)%sp2;
+      for (let xx=off2-sp2; xx<W; xx+=sp2){
+        ctx.beginPath(); ctx.arc(xx, gY+5.5, 2.2, 0, 2*Math.PI); ctx.fill();
+      }
+      // 床の見かけの速度矢印(台B上の観測者から見ると床は −vB で動く)
+      if (Math.abs(S.vB) > 0.02){
+        const L = Math.min(70, 16 + Math.abs(S.vB)*26);
+        const cx0 = W*0.45, y2 = gY + 30;
+        arrow(ctx, cx0, y2, cx0 + Math.sign(-S.vB)*L, y2, css('--spring'), null);
+        ctx.fillStyle = css('--spring'); ctx.font = '10.5px sans-serif'; ctx.textAlign='center';
+        ctx.fillText('床Aが動いて見える(速さ '+Math.abs(S.vB).toFixed(2)+' m/s)', cx0, y2+12);
+        ctx.textAlign='left';
+      }
+    }
 
     // ---- 台B(多角形+円弧のくり抜き) ----
     const bx = xb => px(S.XB + xb + vOff), by = yb => py(yb);
@@ -607,7 +632,7 @@
     }
     // B のラベル・記号
     ctx.fillStyle=css('--text-1'); ctx.font='bold 13px sans-serif';
-    ctx.fillText('台 B', bx(LQ*0.45), by(0)+26);
+    ctx.fillText('台 B', bx(PX+0.13), by(Hh*0.45));
     ctx.font='11.5px sans-serif'; ctx.fillStyle=css('--text-2');
     const pts=[['U',0,2*R,4,-6],['T',-R,R,-16,4],['R',0,0,4,16],['Q',LQ,0,-3,16],['P',PX,Hh,-4,-8],['W',XW+0.045,Hh,-3,-9]];
     pts.forEach(([nm,xx,yy,dx,dy])=>{ ctx.fillText(nm, bx(xx)+dx, by(yy)+dy); });
@@ -720,7 +745,11 @@
       if (Math.hypot(vx,vy)>0.05){
         const dvx=cap(vx*vs), dvy=cap(vy*vs);
         const ay=cyp-rb-13;   // 小球の上端より少し上
-        arrow(ctx,cxp-dvx/2,ay+dvy/2,cxp+dvx/2,ay-dvy/2,css('--series-v'),'v',6,-6);
+        arrow(ctx,cxp-dvx/2,ay+dvy/2,cxp+dvx/2,ay-dvy/2,css('--series-v'),null);
+        // ラベルは常に矢印の先端の少し先へ(他の矢印と重ならない)
+        const Lv=Math.hypot(dvx,dvy)||1, uxv=dvx/Lv, uyv=-dvy/Lv;
+        ctx.fillStyle=css('--series-v'); ctx.font='italic 13.5px KaTeX_Math, sans-serif';
+        ctx.fillText('v', cxp+dvx/2 + uxv*13 - 4, ay-dvy/2 + uyv*13 + 5);
       }
       if (S.mode==='free' && S.view==='ground' && Math.abs(S.vB)>0.03){
         const bxp=px(S.XB+LQ*0.45), byp=by(0)+40;
@@ -829,7 +858,7 @@
     const D=S.data;
     const tMax=Math.max(1.0, S.t*1.02);
     let ymax=0.5, ymin=0;
-    for(let i=0;i<D.t.length;i++){ ymax=Math.max(ymax,D.vc[i],D.vb[i]); ymin=Math.min(ymin,D.vb[i]); }
+    for(let i=0;i<D.t.length;i++){ ymax=Math.max(ymax,D.vc[i],D.vb[i]); ymin=Math.min(ymin,D.vb[i],D.vc[i]); }
     if (S.ev.v0) ymax=Math.max(ymax,S.ev.v0);
     ymax*=1.15; ymin = ymin<0 ? ymin*1.25 : 0;
     const xOf=t=>mL+t/tMax*pw, yOf=v=>mT+(ymax-v)/(ymax-ymin)*ph;
@@ -881,7 +910,7 @@
       }
     };
     plot(D.vc, css('--series-v'));
-    if (S.mode==='free') plot(D.vb, css('--spring'));
+    if (S.mode==='free'){ plot(D.vb, css('--spring')); plot(D.vg, css('--good')); }
   }
 
   // ================= UI 更新 =================
@@ -965,10 +994,14 @@
       stepSim(dtReal*S.speed);
       // 記録
       const cur=current();
+      const vcx=vcxNow();
       const D=S.data;
-      D.t.push(S.t); D.vc.push(cur.vc); D.vb.push(cur.vb);
+      D.t.push(S.t);
+      D.vc.push(S.mode==='free' ? vcx : cur.vc);   // 問2は速度(x成分)
+      D.vb.push(cur.vb);
+      D.vg.push((S.m*vcx + S.M*cur.vb)/(S.m+S.M)); // 重心の速度
       if (D.t.length>1600){
-        for(const kk of ['t','vc','vb']) S.data[kk]=S.data[kk].filter((_,i)=>i%2===0 || i===S.data[kk].length-1);
+        for(const kk of ['t','vc','vb','vg']) S.data[kk]=S.data[kk].filter((_,i)=>i%2===0 || i===S.data[kk].length-1);
       }
       let cp;
       if (S.phase==='projectile'||S.phase==='landed') cp={x:S.pj.x,y:S.pj.y};
@@ -996,7 +1029,7 @@
     S.phase='ready'; S.t=0; S.XB=0; S.vB=0; S.c=S.l; S.paused=false;
     S.sp={c0:S.l, vin:0, t0:0, XB0:0};
     S.ev={rel:false, v0:0, w0:0, qr:false, vqr:0, tStop:null, outcome:null, outText:''};
-    S.trail=[]; S.data={t:[],vc:[],vb:[]}; S.bubbles=[];
+    S.trail=[]; S.data={t:[],vc:[],vb:[],vg:[]}; S.bubbles=[];
     $('msg1').innerHTML=''; $('msg2').innerHTML='';
     $('banner').style.display='none';
     $('playBtn').textContent='▶ スタート';
@@ -1049,6 +1082,8 @@
       $('viewBtn').textContent='非慣性系(台B上の観測者)から見る';
     }
     $('legB').style.display=md==='free'?'inline':'none';
+    $('legG').style.display=md==='free'?'inline':'none';
+    $('legC').textContent = md==='free' ? '小球Cの速度(床Aから見た x成分)' : '小球Cの速さ(床Aから見た値)';
     reset();
   }
   $('viewBtn').addEventListener('click',()=>{
