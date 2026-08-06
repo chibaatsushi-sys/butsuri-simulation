@@ -90,8 +90,9 @@
   #slowBtn.sel{background:var(--accent); border-color:var(--accent); color:#fff;}
   #viewBtn.on{background:var(--spring); border-color:var(--spring); color:#fff; font-weight:600;}
   #viewBtn:disabled{opacity:.45; cursor:not-allowed;}
-  .readout{display:flex; flex-wrap:wrap; gap:6px 20px; font-size:13.5px; margin-top:8px;}
-  .readout b{font-size:15px;}
+  .readout{display:flex; flex-wrap:wrap; gap:6px 20px; font-size:13.5px; margin-top:8px;
+    font-variant-numeric:tabular-nums;}
+  .readout b{font-size:15px; display:inline-block; min-width:3.6em;}
   .msg{margin-top:6px; font-size:13.5px; min-height:20px;}
   .msg .good{color:var(--good); font-weight:600;}
   .msg .bad{color:var(--bad); font-weight:600;}
@@ -113,9 +114,10 @@
   .fblock p{margin:5px 0; font-size:13.2px;}
   .fblock .val{font-weight:700;}
   .note{font-size:12px; color:var(--text-3);}
+  #animScroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
   @media (max-width:560px){
     .wrap{padding:10px 8px 24px;}
-    #anim{height:300px;}
+    #anim{width:640px; height:300px;}
   }
 </style>
 </head>
@@ -168,7 +170,9 @@
   </div>
 
   <div class="card" style="margin-top:12px;">
-    <canvas id="anim"></canvas>
+    <div id="animScroll">
+      <canvas id="anim"></canvas>
+    </div>
     <div class="readout">
       <span>時間 t = <b id="rT">0.000</b> s</span>
       <span style="color:var(--series-v)">Cの速さ = <b id="rVC">0.000</b> m/s</span>
@@ -623,6 +627,7 @@
     else if (S.phase==='track'){ cpos=ballCenter(S.tr.s); }
     else { cpos=ballCenter(-cNow); }
     const cxp=px(cpos.x + vOff), cyp=py(cpos.y), rb=0.05*SCALE;
+    S._bpx = cxp;   // カメラ追従用
     // 軌跡
     if (S.trail.length>1){
       ctx.strokeStyle=css('--series-v'); ctx.globalAlpha=0.28; ctx.lineWidth=1.6;
@@ -634,9 +639,8 @@
       ctx.stroke(); ctx.globalAlpha=1;
     }
     ctx.beginPath(); ctx.arc(cxp,cyp,rb,0,7);
-    ctx.fillStyle=css('--text-1'); ctx.fill();
-    ctx.fillStyle=css('--card');
-    ctx.beginPath(); ctx.arc(cxp-rb*0.3,cyp-rb*0.3,rb*0.25,0,7); ctx.fill();
+    ctx.fillStyle=css('--card'); ctx.fill();
+    ctx.lineWidth=2; ctx.strokeStyle=css('--text-1'); ctx.stroke();
     ctx.fillStyle=css('--text-1'); ctx.font='bold 12px sans-serif';
     ctx.fillText('C', cxp-4, cyp-rb-6);
 
@@ -650,7 +654,8 @@
       // 垂直抗力
       let nx=0, ny=1;
       if (S.phase==='track'){ const T=trk(S.tr.s); nx=T.nx; ny=T.ny; }
-      arrow(ctx,cxp,cyp,cxp+cap(cur.N*fs*nx),cyp-cap(cur.N*fs*ny),css('--series-N'),
+      const nsx = cxp - rb*nx, nsy = cyp + rb*ny;   // 始点=台Bと小球の接点
+      arrow(ctx,nsx,nsy,nsx+cap(cur.N*fs*nx),nsy-cap(cur.N*fs*ny),css('--series-N'),
             S.mode==='free' ? 'N(BがCを押す力)' : 'N', 4, -4);
       // 弾性力
       if (cur.F && cur.F>0.3){
@@ -938,6 +943,15 @@
       renderNow();
     }
     draw();
+    // スマホなど横スクロール時は、再生中カメラが小球を追いかける
+    {
+      const scEl = $('animScroll');
+      if (scEl && scEl.scrollWidth > scEl.clientWidth + 4 &&
+          S.phase!=='ready' && S.phase!=='landed' && !S.paused && S._bpx!=null){
+        scEl.scrollLeft = Math.max(0, Math.min(scEl.scrollWidth - scEl.clientWidth,
+                                               S._bpx - scEl.clientWidth*0.55));
+      }
+    }
     drawGraph();
   }
 
@@ -951,6 +965,8 @@
     $('banner').style.display='none';
     $('playBtn').textContent='▶ スタート';
     initCanvas(); updateFormulas(); if (typeof syncV0UI==='function') syncV0UI();
+    { const scEl=$('animScroll'); if (scEl) scEl.scrollLeft = scEl.scrollWidth; }
+    $('anim').style.touchAction = 'none';   // スタート前は小球ドラッグを優先
     S.xG0 = (S.M*BCM.x + S.m*ballCenter(-S.l).x)/(S.M+S.m);
     renderNow(); draw(); drawGraph();
   }
@@ -958,6 +974,7 @@
     if (S.phase==='ready'){
       S.phase='spring'; S.sp={c0:S.l, vin:0, t0:0, XB0:0};
       S.paused=false;
+      $('anim').style.touchAction = 'pan-x';   // 再生中は横スクロールを優先
       if (S.stick){
         const Tp=2*Math.PI/omt();
         $('msg1').innerHTML='<span class="info">もしも離れなければ:小球はばねに付いたまま、自然長の位置を中心に振幅 l の単振動を続ける(周期 T = '

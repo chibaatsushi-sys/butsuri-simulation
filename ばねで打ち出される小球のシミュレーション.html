@@ -57,21 +57,31 @@
   button{
     padding:6px 14px; border:1px solid var(--border); border-radius:8px;
     background:var(--card); color:var(--text-1); font-size:13.5px; cursor:pointer;
+    white-space:nowrap;
+  }
+  #stickBtn, #normalBtn{white-space:normal;}
+  @media (max-width: 560px){
+    .wrap{padding:10px 10px 24px;}
   }
   button:hover{border-color:var(--text-3);}
   button.primary{background:var(--series-N); border-color:var(--series-N); color:#fff; font-weight:600;}
   button.on{background:var(--spring); border-color:var(--spring); color:#fff; font-weight:600;}
-  #stickBtn{background:var(--series-v); border-color:var(--series-v); color:#fff; font-weight:600;}
-  #stickBtn.on{background:var(--spring); border-color:var(--spring);}
+  .modebtn{font-weight:600;}
+  .modebtn.on{background:var(--series-v); border-color:var(--series-v); color:#fff;}
   #triBtn{background:var(--series-N); border-color:var(--series-N); color:#fff; font-weight:600;}
   #triBtn.on{background:var(--spring); border-color:var(--spring);}
   canvas{display:block; width:100%;}
+  #slowBtn.on{background:var(--series-N); border-color:var(--series-N); color:#fff;}
   .readout{display:flex; gap:10px 24px; flex-wrap:wrap; margin-top:8px; font-variant-numeric:tabular-nums;}
   .ritem{font-size:13px; color:var(--text-2);}
-  .ritem b{font-size:16px; color:var(--text-1); font-weight:600;}
+  .ritem b{font-size:16px; color:var(--text-1); font-weight:600; display:inline-block; min-width:3.6em;}
   .ritem .cv{color:var(--series-v); font-weight:700;}
   .ritem .cs{color:var(--spring); font-weight:700;}
-  #msg{margin-top:8px; font-size:13.5px; font-weight:600; min-height:20px;}
+  /* メッセージ欄:最長のTeX数式入りメッセージを不可視でレンダリングして高さを常に確保
+     → 実メッセージはその上に重ねるので、いつ・何を表示してもレイアウトが動かない */
+  #msgWrap{position:relative; margin-top:8px;}
+  #msgPhantom{visibility:hidden; font-size:13.5px; font-weight:600;}
+  #msg{position:absolute; top:0; left:0; width:100%; font-size:13.5px; font-weight:600;}
   .gtitle{font-size:13px; font-weight:600; margin:0 0 4px;}
   .gtitle .chip{display:inline-block; width:10px; height:10px; border-radius:3px; vertical-align:-1px; margin-right:5px;}
   .formulas{margin-top:14px; font-size:13px; color:var(--text-2);}
@@ -94,8 +104,10 @@
     </div>
     <div class="ctl" style="flex-direction:row; gap:8px;">
       <button class="primary" id="playBtn">▶ スタート</button>
+      <button id="slowBtn">🐢 スロー</button>
       <button id="resetBtn">リセット</button>
-      <button id="stickBtn">もしも小球がばねから離れなかったら</button>
+      <button id="normalBtn" class="modebtn on">通常モード(ばねから離れる)</button>
+      <button id="stickBtn" class="modebtn">もしも小球がばねから離れなかったら</button>
     </div>
   </div>
 
@@ -107,7 +119,10 @@
       <div class="ritem">ばねの縮み = <b id="rX">0.200</b> m</div>
       <div class="ritem"><span class="cs">弾性力</span> = <b id="rF">2.00</b> N</div>
     </div>
-    <div id="msg"></div>
+    <div id="msgWrap">
+      <div id="msgPhantom" aria-hidden="true"></div>
+      <div id="msg"></div>
+    </div>
   </div>
 
   <div class="card" style="margin-top:12px;">
@@ -184,19 +199,23 @@
   }
 
   // ---------- 描画 ----------
-  const SCALE = 400;   // px / m
+  const SCALE = 400;   // px / m(基準幅595pxのとき)
+  // 画面幅に応じた縮尺(スマホでは装置ごと縮小して収める)
+  function geo(){
+    const W = A ? A.W : 595;
+    const s = Math.min(1, W/595);
+    return { s, wallX: W - 60*s, L0: 210*s, xn: W - 60*s - 210*s, SC: SCALE*s };
+  }
   function draw(){
     const {ctx, W, H} = A;
     ctx.clearRect(0,0,W,H);
     const G = H - 70;                 // 床の高さ
-    const wallX = W - 60;             // 壁(W面)の位置
-    const L0 = 210;                   // ばね自然長の描画長さ
-    const xn = wallX - L0;            // 自然長の位置(ばねの左端)
+    const {s, wallX, L0, xn, SC} = geo();
     const rB = 15;                    // 小球の半径
 
     const st = stateNow();
     const inContact = S.mode==='stick' || S.phase==='ready' || S.t < tSep();
-    const ballX = inContact ? xn + st.c*SCALE - rB : xn - st.dist*SCALE - rB;
+    const ballX = inContact ? xn + st.c*SC - rB : xn - st.dist*SC - rB;
     const ballY = G - rB;
 
     // 床
@@ -236,19 +255,20 @@
     const springEnd = inContact ? ballX + rB : xn;
     drawSpring(ctx, springEnd, ballY, wallX, 12);
 
-    // 小球
+    // 小球(白地+縁取り:黒い重力ベクトルと重なっても見やすい)
     ctx.beginPath(); ctx.arc(ballX, ballY, rB, 0, 2*Math.PI);
-    ctx.fillStyle = css('--text-1'); ctx.fill();
+    ctx.fillStyle = css('--card'); ctx.fill();
+    ctx.lineWidth = 2.2; ctx.strokeStyle = css('--text-1'); ctx.stroke();
 
     // ---- 力の矢印 ----
     const mg = S.m*9.8;
     const Fspr = S.k*st.c;                         // 弾性力の大きさ
     const F0 = S.k*S.l;                            // 最初の弾性力 kl
-    const fpx = Math.min(46/mg, 84/Math.max(F0,1e-9));   // 共通スケール [px/N]
+    const fpx = Math.min(46*s/mg, 84*s/Math.max(F0,1e-9));   // 共通スケール [px/N]
     // 重力(下)
     arrow(ctx, ballX, ballY, ballX, ballY + mg*fpx, css('--mg-col'), 'mg');
     // 垂直抗力(上)
-    arrow(ctx, ballX, ballY, ballX, ballY - mg*fpx, css('--series-N'), 'N');
+    arrow(ctx, ballX, ballY + rB, ballX, ballY + rB - mg*fpx, css('--series-N'), 'N');   // 始点=床との接点
     // 弾性力 — 接触中のみ(縮み c>0 なら左向き、伸び c<0 なら右向き)
     if (inContact && Math.abs(Fspr) > 1e-6){
       const ex = ballX - Fspr*fpx;
@@ -260,7 +280,7 @@
       ctx.textAlign='left';
     }
     // 速度(始点は球の外・進行方向の前方)
-    const vpx = 70/Math.max(vSep(),1e-9);
+    const vpx = 70*s/Math.max(vSep(),1e-9);
     if (Math.abs(st.v) > 1e-4){
       const dir = st.v > 0 ? -1 : 1;                 // v>0 は x軸負(左)向き
       const sx = ballX + dir*(rB + 8);
@@ -278,7 +298,7 @@
     }
 
     // ドラッグ用に球の位置を記録
-    ballPos.x = ballX; ballPos.y = ballY; ballPos.r = rB; ballPos.xn = xn;
+    ballPos.x = ballX; ballPos.y = ballY; ballPos.r = rB; ballPos.xn = xn; ballPos.sc = SC;
   }
 
   function drawSpring(ctx, x1, y, x2, coils){
@@ -376,8 +396,8 @@
     if (stick){
       tMax = 2*T; ymax = amp*1.15; ymin = -ymax;
     } else {
-      const xnpx = A.W - 60 - 210;
-      const travel = Math.max(0.2, (xnpx - 55)/SCALE);
+      const gm = geo();
+      const travel = Math.max(0.2, (gm.xn - 55*gm.s)/gm.SC);
       tMax = ts + travel/v0;
       if (kind==='x'){ ymin = -S.l*1.2; ymax = Math.max(v0*(tMax-ts), S.l)*1.1; }
       else { ymin = 0; ymax = amp*1.15; }
@@ -467,9 +487,8 @@
   function setMsg(t, color){ const m=$('msg'); m.innerHTML=t; m.style.color=color||'var(--text-1)'; tex(m); }
   function updatePlayBtn(){
     const b=$('playBtn');
-    if (!S.running) b.textContent='▶ スタート';
-    else if (!S.slow) b.textContent='🐢 スロー';
-    else b.textContent='❚❚ 一時停止';
+    b.textContent = S.running ? '❚❚ 一時停止' : ((S.phase==='shm'||S.phase==='free') ? '▶ 再開' : '▶ スタート');
+    $('slowBtn').classList.toggle('on', S.slow);
   }
   function updateTheory(){
     $('tTheory').textContent = tSep().toFixed(3);
@@ -477,21 +496,23 @@
   }
 
   function reset(){
-    S.phase='ready'; S.t=0; S.running=false; S.slow=false; S.sepT=0; S.sepRealT=0;
+    S.phase='ready'; S.t=0; S.running=false; S.sepT=0; S.sepRealT=0;   // スロー設定は保持
     setMsg(''); updatePlayBtn(); updateTheory();
   }
 
   $('playBtn').addEventListener('click', ()=>{
     if (S.running){
-      if (!S.slow){ S.slow=true; }
-      else { S.running=false; S.slow=false; }
+      S.running=false;                     // 一時停止(スロー設定は保持)
       updatePlayBtn(); return;
     }
-    S.slow=false;
     if (S.phase==='end' || S.phase==='ready'){ if(S.phase==='end') reset(); S.phase='shm'; S.t=0; }
     S.running=true; updatePlayBtn();
   });
   $('resetBtn').addEventListener('click', reset);
+  $('slowBtn').addEventListener('click', ()=>{
+    S.slow = !S.slow;
+    $('slowBtn').classList.toggle('on', S.slow);
+  });
 
   // ---- x-t / v-t / a-t の3つ表示切り替え ----
   $('triBtn').addEventListener('click', ()=>{
@@ -504,21 +525,18 @@
   });
 
   // ---- 「もしも小球がばねから離れなかったら」モード ----
-  $('stickBtn').addEventListener('click', ()=>{
-    if (S.mode==='launch'){
-      S.mode='stick';
-      $('stickBtn').classList.add('on');
-      $('stickBtn').textContent='通常モードに戻す(ばねから離れる場合)';
-      reset();
+  function setStickMode(stick){
+    S.mode = stick ? 'stick' : 'launch';
+    $('normalBtn').classList.toggle('on', !stick);
+    $('stickBtn').classList.toggle('on', stick);
+    reset();
+    if (stick){
       S.phase='shm'; S.t=0; S.running=true; updatePlayBtn();
       setMsg('もし離れなければ:小球はばねに付いたまま、<b>自然長の位置を中心</b>に振幅 l・周期 \\(T = 2\\pi\\sqrt{m/k}\\) の単振動を続ける(縮みの表示が負のときは「伸び」)', 'var(--spring)');
-    } else {
-      S.mode='launch';
-      $('stickBtn').classList.remove('on');
-      $('stickBtn').textContent='もしも小球がばねから離れなかったら';
-      reset();
     }
-  });
+  }
+  $('normalBtn').addEventListener('click', ()=>setStickMode(false));
+  $('stickBtn').addEventListener('click', ()=>setStickMode(true));
 
   // ---- 小球のドラッグで縮み l を変更 ----
   (function(){
@@ -538,7 +556,7 @@
       const r = cv.getBoundingClientRect();
       const x = e.clientX-r.left, y = e.clientY-r.top;
       if (dragging){
-        let l = (x + ballPos.r - ballPos.xn)/SCALE;   // 球の右端がばねの左端
+        let l = (x + ballPos.r - ballPos.xn)/(ballPos.sc || SCALE);   // 球の右端がばねの左端
         l = Math.max(0.05, Math.min(0.35, l));
         S.l = l;
         $('Lin').value = l.toFixed(2);
@@ -580,8 +598,8 @@
       }
       // 画面左端に到達したら停止
       const st = stateNow();
-      const xn = A.W - 60 - 210;
-      if (S.mode==='launch' && S.phase==='free' && xn - st.dist*SCALE - 15 < 40){
+      const gm = geo();
+      if (S.mode==='launch' && S.phase==='free' && gm.xn - st.dist*gm.SC - 15 < 30*gm.s + 8){
         S.phase='end'; S.running=false; updatePlayBtn();
         setMsg(`端まで到達(ばねから離れたあとは、速さ ${vSep().toFixed(3)} m/s の等速直線運動)`, 'var(--text-2)');
       }
@@ -601,6 +619,12 @@
   window.addEventListener('resize', initCanvas);
   initCanvas();
   document.querySelectorAll('.formulas, .gtitle').forEach(tex);
+  // 高さ確保用の下書き(離脱時の最長メッセージと同一内容・不可視で常時レンダリング)
+  {
+    const ph = $('msgPhantom');
+    ph.innerHTML = 't = \\(\\dfrac{\\pi}{2}\\sqrt{\\dfrac{m}{k}}\\) = 0.000 s で自然長の位置に到達 → 速さ \\(v_0 = l\\sqrt{\\dfrac{k}{m}}\\) = 0.000 m/s でばねから離れた!';
+    tex(ph);
+  }
   reset();
   requestAnimationFrame(frame);
 })();
