@@ -95,6 +95,17 @@
     white-space:nowrap; z-index:5; font-variant-numeric:tabular-nums;
   }
 
+  #eqBox{margin-top:8px; border:2px solid var(--series-N); border-radius:10px; padding:8px 12px 7px;}
+  #eqBox.rot{border-color:var(--bad);}
+  #eqTitle{font-weight:700; font-size:13px; color:var(--series-N);}
+  #eqBox.rot #eqTitle{color:var(--bad);}
+  #eqMain{font-weight:600; font-size:16px; margin:4px 0 2px; color:var(--text-1);}
+  #eqNum{font-size:12.5px; color:var(--text-2); font-variant-numeric:tabular-nums; min-height:17px;}
+  #eqNote{font-size:11.5px; color:var(--text-3);}
+  #slowBtn.on{background:var(--series-N); border-color:var(--series-N); color:#fff;}
+  .viewbtn{font-weight:600;}
+  .viewbtn.on{background:var(--series-v); border-color:var(--series-v); color:#fff;}
+
   /* ---- readouts ---- */
   .readout{display:flex; gap:10px 18px; flex-wrap:wrap; margin-top:8px; font-variant-numeric:tabular-nums;}
   .ritem{font-size:13px; color:var(--text-2);}
@@ -127,16 +138,21 @@
     <div class="ctl"><label>m [kg]</label><input class="num" type="number" id="Min" value="1" min="0.1" step="0.1"></div>
     <div class="ctl"><label>g [m/s²]</label><input class="num" type="number" id="Gin" value="9.8" min="0.1" step="0.1"></div>
     <div class="ctl">
-      <label>再生速度 <span id="spdval">0.4×</span></label>
-      <input type="range" id="spd" min="0.1" max="1.5" step="0.1" value="0.4" style="width:120px">
+      <label>再生速度 <span id="spdval">0.3×</span></label>
+      <input type="range" id="spd" min="0.1" max="1.5" step="0.1" value="0.3" style="width:120px">
     </div>
     <div class="ctl" style="flex-direction:row; gap:8px;">
       <button class="primary" id="playBtn">▶ スタート</button>
+      <button id="slowBtn">🐢 スロー</button>
       <button id="resetBtn">リセット</button>
     </div>
     <div class="ctl">
       <label>車を自分で動かす=角度αを手動で変える<br>α = <span id="scrubval">0°</span></label>
-      <input type="range" id="scrub" min="0" max="180" step="1" value="0" style="width:200px">
+      <input type="range" id="scrub" min="0" max="360" step="1" value="0" style="width:200px">
+    </div>
+    <div class="ctl" style="flex-direction:row; gap:8px; flex-wrap:wrap; width:100%;">
+      <button class="viewbtn on" id="inertialBtn">慣性系(外の観測者)から見る</button>
+      <button class="viewbtn" id="rotBtn">非慣性系(一緒に円運動する観測者)から見る</button>
     </div>
   </div>
 
@@ -147,6 +163,12 @@
         <div class="ritem">α = <b id="rA">0.0</b> °</div>
         <div class="ritem"><span class="dotv">v</span> = <b id="rV">0.00</b> m/s</div>
         <div class="ritem"><span class="dotN">N</span> = <b id="rN">0.00</b> N</div>
+      </div>
+      <div id="eqBox">
+        <div id="eqTitle"></div>
+        <div id="eqMain"></div>
+        <div id="eqNum"></div>
+        <div id="eqNote"></div>
       </div>
       <div id="msg"></div>
       <div id="regime"></div>
@@ -191,10 +213,11 @@
     px:0, py:0, vx:0, vy:0,
     trail: [],
     running: false,
-    speed: 0.4, slow: false,
+    speed: 0.3, slow: false,
     aMax: 0, reversed: false, detachA: null, passedTop: false,
     aPrevStep: 0, topT: 0, detachT: 0, turnT: 0,
     scrubOK: true,
+    viewRot: false,        // true: 一緒に円運動する観測者(非慣性系)から見る
   };
   const SQ2 = Math.SQRT2, SQ5 = Math.sqrt(5);
 
@@ -308,40 +331,58 @@
     const cx = W/2, cy = H/2 - 10, sc = Rpx/S.R;
     const X = x => cx + x*sc, Y = y => cy - y*sc;
 
+    // 視点(非慣性系=車と一緒に回る観測者):世界座標を +α 回転して車を最下点に固定
+    const aEff = currentAngleForDraw();
+    const onSurf = (S.phase!=='projectile' && S.phase!=='landed');
+    const rot = S.viewRot && onSurf;
+    const va = rot ? aEff : 0;
+    const CAv = Math.cos(va), SAv = Math.sin(va);
+    const TRp = (x,y) => [x*CAv - y*SAv, x*SAv + y*CAv];
+
     // 円筒面(壁)
     ctx.lineWidth = 7; ctx.strokeStyle = css('--border');
     ctx.beginPath(); ctx.arc(cx, cy, Rpx+4, 0, 2*Math.PI); ctx.stroke();
     ctx.lineWidth = 1.5; ctx.strokeStyle = css('--text-3');
     ctx.beginPath(); ctx.arc(cx, cy, Rpx, 0, 2*Math.PI); ctx.stroke();
-    // 地面
-    ctx.strokeStyle = css('--text-3'); ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(cx-Rpx-25, cy+Rpx+8); ctx.lineTo(cx+Rpx+25, cy+Rpx+8); ctx.stroke();
+    // 地面(非慣性系では傾いて見える)
+    {
+      const gy = -(Rpx+8)/sc, gx = (Rpx+25)/sc;
+      const g1 = TRp(-gx, gy), g2 = TRp(gx, gy);
+      ctx.strokeStyle = css('--text-1'); ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.moveTo(X(g1[0]), Y(g1[1])); ctx.lineTo(X(g2[0]), Y(g2[1])); ctx.stroke();
+      // 左端に「地面」ラベル
+      ctx.fillStyle = css('--text-1'); ctx.font = 'bold 12px sans-serif';
+      const glx = Math.max(4, Math.min(W-30, X(g1[0])+2));
+      const gly = Math.max(12, Math.min(H-4, Y(g1[1])+16));
+      ctx.fillText('地面', glx, gly);
+    }
 
-    // 中心 O と最下点への基準線
+    // 中心 O と最下点(スタート位置)への基準線
     ctx.fillStyle = css('--text-2');
     ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 2*Math.PI); ctx.fill();
     ctx.font = '12px sans-serif'; ctx.fillText('O', cx+6, cy-4);
     ctx.setLineDash([4,4]); ctx.strokeStyle = css('--text-3');
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy+Rpx); ctx.stroke();
+    {
+      const rf = TRp(0, -S.R);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(X(rf[0]), Y(rf[1])); ctx.stroke();
+    }
 
     // 現在角の半径線
-    const aEff = currentAngleForDraw();
     let carP;
     if (S.phase === 'projectile' || S.phase === 'landed') carP = [S.px, S.py];
-    else carP = posOf(aEff);
+    else carP = TRp(...posOf(aEff));
     const cpx = X(carP[0]), cpy = Y(carP[1]);
     if (S.phase !== 'projectile' && S.phase !== 'landed') {
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cpx, cpy); ctx.stroke();
       ctx.setLineDash([]);
       // α の弧
-      const start = Math.PI/2, end = Math.PI/2 + aEff; // 画面角: 最下点=π/2, 左回り
+      const start = Math.PI/2 - va, end = Math.PI/2 + aEff - va; // 画面角(視点回転を反映)
       ctx.strokeStyle = css('--text-2'); ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.arc(cx, cy, 34, start, end); ctx.stroke();
-      const mid = start + Math.min(aEff, 0.9*aEff + 0.35)/1 * 0.5;
-      ctx.fillStyle = css('--text-1'); ctx.font = 'italic 14px serif';
+      ctx.fillStyle = css('--text-1'); ctx.font = 'italic 15px KaTeX_Math, serif';
       ctx.fillText('α', cx + 48*Math.cos(start + aEff/2) - 4, cy + 48*Math.sin(start + aEff/2) + 4);
       // R ラベル
-      ctx.font = '12px sans-serif'; ctx.fillStyle = css('--text-2');
+      ctx.font = 'italic 13px KaTeX_Math, serif'; ctx.fillStyle = css('--text-2');
       ctx.fillText('R', (cx+cpx)/2 + 8, (cy+cpy)/2);
     }
     ctx.setLineDash([]);
@@ -362,21 +403,47 @@
     const fScale = Math.min(40*kf/(S.m*S.g), 140*kf/Math.max(Nmax,1e-9));
     const vScale = 60*kf/Math.max(v0(),1e-9); // v0 を60px×縮尺に
     if (!ghost) {
-      // mg(下向き)
-      arrow(ctx, cpx, cpy, cpx, cpy + S.m*S.g*fScale, css('--mg-col'), 'mg');
+      // mg(下向き。非慣性系では傾いて見える)
+      {
+        const gv = TRp(0, -1), L = S.m*S.g*fScale;
+        arrow(ctx, cpx, cpy, cpx + gv[0]*L, cpy - gv[1]*L, css('--mg-col'), 'mg');
+      }
       if (S.phase !== 'projectile' && S.phase !== 'landed') {
         // N(中心向き)
         const nx = (cx-cpx), ny = (cy-cpy), nl = Math.hypot(nx,ny);
         const Nlen = NNow*fScale;   // 上限で切らず、常に N に比例した長さ
         if (NNow > 1e-6) arrow(ctx, cpx, cpy, cpx + nx/nl*Nlen, cpy + ny/nl*Nlen, css('--series-N'), 'N');
-        // v(接線・始点は車の外)
-        const tv = velOf(aEff, 1); const tl = Math.hypot(tv[0],tv[1]);
-        const sgn = (S.phase==='circle' && S.w<0) ? -1 : 1;
-        const vlen = Math.min(Math.abs(vNow)*vScale, 110);
-        if (Math.abs(vNow) > 1e-3 && S.phase!=='ready'){
-          const ux = sgn*tv[0]/tl, uy = -sgn*tv[1]/tl;   // 画面上の単位ベクトル
-          const sx = cpx + ux*20, sy = cpy + uy*20;       // 車の前方 20px から描く
-          arrow(ctx, sx, sy, sx + ux*vlen, sy + uy*vlen, css('--series-v'), 'v');
+        // v(接線・始点は車の外)— 非慣性系では車は静止して見えるので描かない
+        if (!rot){
+          const tv = velOf(aEff, 1); const tl = Math.hypot(tv[0],tv[1]);
+          const sgn = (S.phase==='circle' && S.w<0) ? -1 : 1;
+          const vlen = Math.min(Math.abs(vNow)*vScale, 110);
+          if (Math.abs(vNow) > 1e-3 && S.phase!=='ready'){
+            const ux = sgn*tv[0]/tl, uy = -sgn*tv[1]/tl;   // 画面上の単位ベクトル
+            const sx = cpx + ux*20, sy = cpy + uy*20;       // 車の前方 20px から描く
+            arrow(ctx, sx, sy, sx + ux*vlen, sy + uy*vlen, css('--series-v'), 'v');
+          }
+        }
+        // 遠心力(非慣性系のみ現れる見かけの力)
+        if (rot && isFinite(vNow)){
+          const Fc = S.m*vNow*vNow/S.R;
+          if (Fc > 1e-6){
+            const ox = (cpx-cx), oy = (cpy-cy), ol = Math.hypot(ox,oy)||1;
+            const ux2 = ox/ol, uy2 = oy/ol;
+            // キャンバスの端で切らないよう、外向きに使える長さを計算
+            let avail = 1e9;
+            if (ux2 >  1e-6) avail = Math.min(avail, (W-8-cpx)/ux2);
+            if (ux2 < -1e-6) avail = Math.min(avail, (8-cpx)/ux2);
+            if (uy2 >  1e-6) avail = Math.min(avail, (H-8-cpy)/uy2);
+            if (uy2 < -1e-6) avail = Math.min(avail, (8-cpy)/uy2);
+            const L = Math.min(Fc*fScale, Math.max(34, avail));
+            ctx.lineWidth = 3;
+            arrow(ctx, cpx, cpy, cpx + ux2*L, cpy + uy2*L, css('--bad'), '');
+            ctx.fillStyle = css('--bad'); ctx.font = 'bold 12.5px sans-serif';
+            const lx = Math.max(4, Math.min(W-92, cpx + ux2*L*0.6 + (ux2>=0?8:-90)));
+            const ly = Math.max(14, Math.min(H-6, cpy + uy2*L*0.6 + 4));
+            ctx.fillText('遠心力 mv²/R', lx, ly);
+          }
         }
       } else {
         const sp = Math.hypot(S.vx,S.vy);
@@ -410,6 +477,55 @@
       ctx.textAlign='left';
     }
 
+    // ---- 観測者(棒人間) ----
+    {
+      const sM = 40*kf;
+      // 外の観測者:地面の上(円の右外)。非慣性系では回って見える
+      const gpos = TRp((Rpx+26)/sc, -(Rpx+8)/sc);
+      const gup = TRp(0,1);
+      const gx2=X(gpos[0]), gy2=Y(gpos[1]);
+      const actA = !S.viewRot;
+      drawStickman(ctx, gx2, gy2, gup[0], -gup[1], sM, actA?css('--series-v'):css('--text-3'), actA?2.4:1.7);
+      ctx.font = actA?'bold 11px sans-serif':'10.5px sans-serif';
+      ctx.fillStyle = actA?css('--series-v'):css('--text-3');
+      ctx.textAlign='center';
+      {
+        const gtxt='外の観測者'+(actA?'(いまの視点)':'');
+        const ghw=ctx.measureText(gtxt).width/2+4;
+        ctx.fillText(gtxt, Math.max(ghw,Math.min(W-ghw,gx2)), Math.max(12,Math.min(H-4,gy2+15)));
+      }
+      // 一緒に回る観測者:車のすぐ後ろの面の上
+      if (onSurf){
+        const op = TRp(...posOf(aEff-0.18));
+        const ox2=X(op[0]), oy2=Y(op[1]);
+        const ovx=cx-ox2, ovy=cy-oy2, ovl=Math.hypot(ovx,ovy)||1;
+        const actB = S.viewRot;
+        drawStickman(ctx, ox2, oy2, ovx/ovl, ovy/ovl, sM*0.9, actB?css('--series-v'):css('--text-3'), actB?2.4:1.7);
+        ctx.font = actB?'bold 11px sans-serif':'10.5px sans-serif';
+        ctx.fillStyle = actB?css('--series-v'):css('--text-3');
+        {
+          const btxt='一緒に回る観測者'+(actB?'(いまの視点)':'');
+          const bhw=ctx.measureText(btxt).width/2+4;
+          ctx.fillText(btxt, Math.max(bhw,Math.min(W-bhw,ox2+ovx/ovl*sM*1.25)),
+            Math.max(12,Math.min(H-4,oy2+ovy/ovl*sM*1.25)));
+        }
+      }
+      ctx.textAlign='left';
+    }
+
+    // ---- 運動方程式(慣性系)/力のつりあい(非慣性系)の表示(キャンバス下の固定ボックス) ----
+    if (!ghost) updateEqBox(rot, vNow, aEff, onSurf);
+    if (rot){
+      ctx.fillStyle = css('--bad'); ctx.font = 'bold 12.5px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('非慣性系では「遠心力」という見かけの力が現れる!', cx, 16);
+      ctx.textAlign='left';
+    }
+    if (S.viewRot && !onSurf){
+      ctx.fillStyle = css('--text-3'); ctx.font = '11.5px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('(面から離れて円運動でなくなったので、慣性系で表示中)', cx, 16);
+      ctx.textAlign='left';
+    }
+
     // ---- 車の吹き出し ----
     const nowT = performance.now();
     let bub = null;
@@ -426,6 +542,57 @@
       const sx = cpx - 20, sy = cpy - 6;
       arrow(ctx, sx, sy, sx - Math.min(v0()*vScale,110), sy, css('--series-v'), 'v₀');
     }
+  }
+
+  // 運動方程式(慣性系)/力のつりあい(非慣性系)の固定ボックス(キャンバスの下)
+  let eqKey='';
+  function updateEqBox(rot, vNow, aEff, onSurf){
+    const box=$('eqBox');
+    const key = !onSurf ? 'off' : (rot ? 'rot' : 'in');
+    if (key !== eqKey){
+      eqKey = key;
+      box.classList.toggle('rot', key==='rot');
+      if (key==='off'){
+        $('eqTitle').textContent='【慣性系】面から離れた後';
+        $('eqMain').textContent='はたらく力は重力 mg だけ → 放物運動';
+        $('eqNote').textContent='';
+      } else if (key==='rot'){
+        $('eqTitle').textContent='【非慣性系】車は静止して見える → 力のつりあい!';
+        $('eqMain').innerHTML='<span id="eqTex"></span>';
+        if (window.katex)
+          katex.render('\\text{半径方向: }\\;\\; N \\;=\\; \\underbrace{m\\dfrac{v^2}{R}}_{\\text{遠心力}} \\;+\\; mg\\cos\\alpha', $('eqTex'), {throwOnError:false});
+        else $('eqMain').textContent='半径方向: N = mv²/R(遠心力) + mg cosα';
+        $('eqNote').textContent='※ 遠心力は、回転する観測者だけが感じる見かけの力(慣性力)。慣性系には存在しない!';
+      } else {
+        $('eqTitle').textContent='【慣性系】円運動している(加速度あり) → 運動方程式!';
+        $('eqMain').innerHTML='<span id="eqTex"></span>';
+        if (window.katex)
+          katex.render('\\text{向心方向: }\\;\\; m\\dfrac{v^2}{R} \\;=\\; N \\;-\\; mg\\cos\\alpha', $('eqTex'), {throwOnError:false});
+        else $('eqMain').textContent='向心方向: mv²/R = N − mg cosα';
+        $('eqNote').textContent='※ 慣性系に「遠心力」は存在しない!\u3000(ma = 向心方向の合力)';
+      }
+    }
+    if (key==='off'){ $('eqNum').textContent=''; return; }
+    const v2=isFinite(vNow)?vNow*vNow:0;
+    const mv2r=S.m*v2/S.R, mgcos=S.m*S.g*Math.cos(aEff), NN=mv2r+mgcos;
+    $('eqNum').textContent = key==='rot'
+      ? 'いま: '+NN.toFixed(1)+' = '+mv2r.toFixed(1)+' + ('+mgcos.toFixed(1)+')  → つりあっている'
+      : 'いま: '+mv2r.toFixed(1)+' = '+NN.toFixed(1)+' − ('+mgcos.toFixed(1)+')';
+  }
+
+  // 棒人間:(x,y)=足元、(ux,uy)=画面上の「上」向き単位ベクトル
+  function drawStickman(ctx, x, y, ux, uy, s, color, lw){
+    const px2=-uy, py2=ux;
+    const P=(du,dp)=>[x+ux*du*s+px2*dp*s, y+uy*du*s+py2*dp*s];
+    ctx.strokeStyle=color; ctx.lineWidth=lw||2; ctx.lineCap='round';
+    const hip=P(0.38,0), sh=P(0.64,0), hd=P(0.80,0);
+    ctx.beginPath(); ctx.arc(hd[0],hd[1],s*0.13,0,2*Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hip[0],hip[1]); ctx.lineTo(sh[0],sh[1]); ctx.stroke();
+    const f1=P(0,-0.17), f2=P(0,0.17);
+    ctx.beginPath(); ctx.moveTo(f1[0],f1[1]); ctx.lineTo(hip[0],hip[1]); ctx.lineTo(f2[0],f2[1]); ctx.stroke();
+    const a1=P(0.48,-0.22), a2=P(0.48,0.22);
+    ctx.beginPath(); ctx.moveTo(a1[0],a1[1]); ctx.lineTo(sh[0],sh[1]); ctx.lineTo(a2[0],a2[1]); ctx.stroke();
+    ctx.lineCap='butt';
   }
 
   // 車に付く吹き出し(円の中心方向に配置し、しっぽが車を指す)
@@ -484,7 +651,7 @@
     ctx.lineTo(x2-hs*ux+hs*0.5*uy, y2-hs*uy-hs*0.5*ux);
     ctx.closePath(); ctx.fill();
     if (label){
-      ctx.font='italic bold 13px serif';
+      ctx.font='italic 14.5px KaTeX_Math, "Times New Roman", serif';
       ctx.fillText(label, x2+ux*12-4, y2+uy*12+4);
     }
   }
@@ -678,9 +845,8 @@
   }
   function updatePlayBtn(){
     const b=$('playBtn');
-    if (!S.running) b.textContent='▶ スタート';
-    else if (!S.slow) b.textContent='🐢 スロー';      // もう一度押すとスローモーション
-    else b.textContent='❚❚ 一時停止';                // さらに押すと一時停止
+    b.textContent = S.running ? '❚❚ 一時停止' : '▶ スタート';
+    $('slowBtn').classList.toggle('on', S.slow);
   }
 
   function updateRegime(){
@@ -696,7 +862,7 @@
   }
 
   function reset(){
-    S.phase='ready'; S.a=0; S.w=0; S.trail=[]; S.running=false; S.slow=false;
+    S.phase='ready'; S.a=0; S.w=0; S.trail=[]; S.running=false;   // スロー設定は保持
     S.reversed=false; S.passedTop=false; S.detachA=null; S.aMax=0; S.scrubOK=true;
     S.aPrevStep=0; S.topT=0; S.detachT=0; S.turnT=0;
     $('scrub').value=0; $('scrubval').textContent='0°';
@@ -706,11 +872,9 @@
 
   $('playBtn').addEventListener('click', ()=>{
     if (S.running){
-      if (!S.slow){ S.slow=true; }              // 2回目: スローモーション
-      else { S.running=false; S.slow=false; }   // 3回目: 一時停止
+      S.running=false;                          // 一時停止(スロー設定は保持)
       updatePlayBtn(); return;
     }
-    S.slow=false;
     if (S.phase==='landed'){ reset(); }
     if (S.phase==='ready'){ S.phase='circle'; S.a=0; S.w=v0()/S.R; }
     else if (S.phase==='scrub'){
@@ -720,6 +884,17 @@
     S.running=true; updatePlayBtn();
   });
   $('resetBtn').addEventListener('click', reset);
+  $('slowBtn').addEventListener('click', ()=>{
+    S.slow = !S.slow;
+    $('slowBtn').classList.toggle('on', S.slow);
+  });
+  function syncViewBtns(){
+    $('inertialBtn').classList.toggle('on', !S.viewRot);
+    $('rotBtn').classList.toggle('on', S.viewRot);
+    drawAnim();
+  }
+  $('inertialBtn').addEventListener('click', ()=>{ S.viewRot=false; syncViewBtns(); });
+  $('rotBtn').addEventListener('click', ()=>{ S.viewRot=true; syncViewBtns(); });
 
   $('kSlider').addEventListener('input', e=>{
     S.n=parseFloat(e.target.value);
@@ -743,7 +918,7 @@
     $('scrubval').textContent=d.toFixed(0)+'°';
     S.phase='scrub'; S.a=d*Math.PI/180;
     S.trail=[]; S.reversed=false; S.passedTop=false; S.detachA=null;
-    S.scrubOK = S.a <= alphaStop().a + 1e-9;
+    S.scrubOK = (alphaStop().type==='loop') || S.a <= alphaStop().a + 1e-9 || S.a >= 2*Math.PI - alphaStop().a - 1e-9;
     setMsg(S.scrubOK?'':'', '');
   });
 
@@ -809,6 +984,12 @@
     if (last==null) last=ts;
     const dt=Math.min((ts-last)/1000, 0.05); last=ts;
     if (S.running) advance(dt*S.speed*(S.slow?0.25:1));  // スロー時は1/4倍速
+    // 再生中はαスライダーも連動して動く
+    if (S.phase==='circle'){
+      const ad = ((S.a % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+      $('scrub').value = deg(ad);
+      $('scrubval').textContent = deg(ad).toFixed(0)+'°';
+    }
     drawAnim();
     drawGraph(GN,'N',$('tipN'));
     drawGraph(GV,'v',$('tipV'));
