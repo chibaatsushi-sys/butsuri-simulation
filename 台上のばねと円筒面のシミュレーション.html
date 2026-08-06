@@ -562,9 +562,11 @@
     // ---- 床A ----
     ctx.strokeStyle=css('--text-2'); ctx.lineWidth=2;
     ctx.beginPath(); ctx.moveTo(0,gY); ctx.lineTo(W,gY); ctx.stroke();
-    ctx.lineWidth=1; ctx.strokeStyle=css('--text-3');
-    const hs=((vOff*SCALE)%13+13)%13;
-    for(let x=4+hs-13;x<W;x+=13){ ctx.beginPath(); ctx.moveTo(x,gY); ctx.lineTo(x-7,gY+8); ctx.stroke(); }
+    if (S.mode==='fixed'){   // 問2(自由に動ける)ではなめらかな床にするため斜線なし
+      ctx.lineWidth=1; ctx.strokeStyle=css('--text-3');
+      const hs=((vOff*SCALE)%13+13)%13;
+      for(let x=4+hs-13;x<W;x+=13){ ctx.beginPath(); ctx.moveTo(x,gY); ctx.lineTo(x-7,gY+8); ctx.stroke(); }
+    }
     ctx.fillStyle=css('--text-1'); ctx.font='bold 13px sans-serif';
     ctx.fillText(S.view==='cart' ? '床 A(動いて見える)' : '床 A', W-(S.view==='cart'?128:52), gY+22);
 
@@ -587,11 +589,27 @@
     ctx.closePath();
     ctx.fillStyle=css('--trackfill'); ctx.fill();
     ctx.strokeStyle=css('--text-2'); ctx.lineWidth=1.6; ctx.stroke();
+    // 問1:台Bの両側にストッパー(くさび)を描いて固定を表現
+    if (S.mode==='fixed'){
+      const wedge = (xEdge, dir) => {   // dir=+1: 右向きに広がる(左側用は -1)
+        const x1 = bx(xEdge), hgt = 15, wid = 17;
+        ctx.beginPath();
+        ctx.moveTo(x1, gY);
+        ctx.lineTo(x1, gY - hgt);
+        ctx.lineTo(x1 + dir*wid, gY);
+        ctx.closePath();
+        ctx.fillStyle = css('--text-2'); ctx.globalAlpha = 0.85; ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = css('--text-1'); ctx.lineWidth = 1.3; ctx.stroke();
+      };
+      wedge(-R-0.16, -1);        // 左側のストッパー
+      wedge(XW+0.10, +1);        // 右側のストッパー
+    }
     // B のラベル・記号
     ctx.fillStyle=css('--text-1'); ctx.font='bold 13px sans-serif';
     ctx.fillText('台 B', bx(LQ*0.45), by(0)+26);
     ctx.font='11.5px sans-serif'; ctx.fillStyle=css('--text-2');
-    const pts=[['U',0,2*R,4,-6],['T',-R,R,-16,4],['R',0,0,4,16],['Q',LQ,0,-3,16],['P',PX,Hh,-4,-8],['W',XW+0.05,Hh+0.26,-4,-6]];
+    const pts=[['U',0,2*R,4,-6],['T',-R,R,-16,4],['R',0,0,4,16],['Q',LQ,0,-3,16],['P',PX,Hh,-4,-8],['W',XW+0.045,Hh,-3,-9]];
     pts.forEach(([nm,xx,yy,dx,dy])=>{ ctx.fillText(nm, bx(xx)+dx, by(yy)+dy); });
     // 円の中心 O
     ctx.fillStyle=css('--text-3');
@@ -607,6 +625,22 @@
     ctx.setLineDash([]);
     ctx.beginPath(); ctx.arc(bx(LQ),by(0), 30, -TH, 0, false); ctx.stroke();
     ctx.fillText('θ', bx(LQ)+34, by(0)-5);
+    // h の寸法(QRの高さを基準とした面PWの高さ)— 問題の図と同様に薄く表示
+    {
+      const x0 = bx(XW + 0.165), yTop = by(Hh), yBot = by(0);
+      ctx.strokeStyle = css('--text-3'); ctx.lineWidth = 1;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(bx(XW+0.10), yBot); ctx.lineTo(x0+9, yBot); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx(XW+0.10), yTop); ctx.lineTo(x0+9, yTop); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(x0,yTop); ctx.lineTo(x0,yBot); ctx.stroke();
+      [[yTop,1],[yBot,-1]].forEach(([yy,d])=>{
+        ctx.beginPath(); ctx.moveTo(x0,yy); ctx.lineTo(x0-3.5,yy+d*6);
+        ctx.moveTo(x0,yy); ctx.lineTo(x0+3.5,yy+d*6); ctx.stroke();
+      });
+      ctx.fillStyle = css('--text-3'); ctx.font = 'italic 13px KaTeX_Math, serif';
+      ctx.fillText('h', x0+5, (yTop+yBot)/2+4);
+    }
 
     // ---- ばね ----
     const cNow = current().c;
@@ -641,8 +675,10 @@
     ctx.beginPath(); ctx.arc(cxp,cyp,rb,0,7);
     ctx.fillStyle=css('--card'); ctx.fill();
     ctx.lineWidth=2; ctx.strokeStyle=css('--text-1'); ctx.stroke();
-    ctx.fillStyle=css('--text-1'); ctx.font='bold 12px sans-serif';
-    ctx.fillText('C', cxp-4, cyp-rb-6);
+    if (S.phase==='ready'){   // スタート前のみ、小球の左上に C を表示(Nと重ならない位置)
+      ctx.fillStyle=css('--text-1'); ctx.font='bold 12px sans-serif';
+      ctx.fillText('C', cxp-rb-13, cyp-rb-5);
+    }
 
     // ---- 力の矢印 ----
     const cur = current();
