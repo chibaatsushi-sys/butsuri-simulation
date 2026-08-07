@@ -72,6 +72,7 @@
   #triBtn.on{background:var(--spring); border-color:var(--spring);}
   canvas{display:block; width:100%;}
   #slowBtn.on{background:var(--series-N); border-color:var(--series-N); color:#fff;}
+  .ghostbtn{font-size:11px; padding:3px 9px; color:var(--text-3); background:transparent;}
   .readout{display:flex; gap:10px 24px; flex-wrap:wrap; margin-top:8px; font-variant-numeric:tabular-nums;}
   .ritem{font-size:13px; color:var(--text-2);}
   .ritem b{font-size:16px; color:var(--text-1); font-weight:600; display:inline-block; min-width:3.6em;}
@@ -108,6 +109,7 @@
       <button id="resetBtn">リセット</button>
       <button id="normalBtn" class="modebtn on">通常モード(ばねから離れる)</button>
       <button id="stickBtn" class="modebtn">もしも小球がばねから離れなかったら</button>
+      <button id="forceBtn" class="ghostbtn">力の矢印を隠す</button>
     </div>
   </div>
 
@@ -156,7 +158,7 @@
     mode: 'launch',          // launch: 自然長で離れる / stick: 離れずに単振動を続ける
     phase: 'ready',          // ready | shm | free | end
     t: 0,                    // シミュレーション内の経過時間 [s]
-    running: false, slow: false,
+    running: false, slow: false, showF: true,
     speed: 0.2,
     sepT: 0, sepRealT: 0,    // 離れた時刻(シミュ時間)と実時刻
   };
@@ -266,18 +268,21 @@
     const F0 = S.k*S.l;                            // 最初の弾性力 kl
     const fpx = Math.min(46*s/mg, 84*s/Math.max(F0,1e-9));   // 共通スケール [px/N]
     // 重力(下)
+    if (S.showF){
     arrow(ctx, ballX, ballY, ballX, ballY + mg*fpx, css('--mg-col'), 'mg');
     // 垂直抗力(上)
     arrow(ctx, ballX, ballY + rB, ballX, ballY + rB - mg*fpx, css('--series-N'), 'N');   // 始点=床との接点
     // 弾性力 — 接触中のみ(縮み c>0 なら左向き、伸び c<0 なら右向き)
     if (inContact && Math.abs(Fspr) > 1e-6){
-      const ex = ballX - Fspr*fpx;
-      arrow(ctx, ballX, ballY, ex, ballY, css('--spring'), null);
+      const bx0 = ballX + rB;                      // ばねと小球の接点
+      const ex = bx0 - Fspr*fpx;
+      arrow(ctx, bx0, ballY, ex, ballY, css('--spring'), null);
       ctx.fillStyle = css('--spring'); ctx.font='bold 12.5px sans-serif';
       ctx.textAlign = Fspr>0 ? 'right' : 'left';
       // 右向き(伸び)のときはばねと重ならないよう下にずらす
       ctx.fillText('弾性力', ex + (Fspr>0 ? -5 : 5), ballY + (Fspr>0 ? 4 : 20));
       ctx.textAlign='left';
+    }
     }
     // 速度(始点は球の外・進行方向の前方)
     const vpx = 70*s/Math.max(vSep(),1e-9);
@@ -289,7 +294,9 @@
 
     // ---- 吹き出し ----
     const nowT = performance.now();
-    if (S.sepRealT && nowT - S.sepRealT < 500){
+    if (S.phase==='ready'){
+      bubble(ctx, ballX, ballY - rB, '静止(v=0)', css('--series-v'));
+    } else if (S.sepRealT && nowT - S.sepRealT < 1500){
       bubble(ctx, ballX, ballY - rB, 'ばねから離れた!', css('--bad'));
     } else if ((S.phase==='free') && S.running){
       bubble(ctx, ballX, ballY - rB, '等速直線運動', css('--series-v'));
@@ -512,6 +519,10 @@
   $('slowBtn').addEventListener('click', ()=>{
     S.slow = !S.slow;
     $('slowBtn').classList.toggle('on', S.slow);
+  });
+  $('forceBtn').addEventListener('click', ()=>{
+    S.showF = !S.showF;
+    $('forceBtn').textContent = S.showF ? '力の矢印を隠す' : '力の矢印を表示';
   });
 
   // ---- x-t / v-t / a-t の3つ表示切り替え ----

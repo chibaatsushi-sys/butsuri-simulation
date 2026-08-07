@@ -88,6 +88,7 @@
   .v0btn{font-size:12px; padding:4px 9px;}
   .v0btn.sel{background:var(--series-v); border-color:var(--series-v); color:#fff;}
   #slowBtn.sel{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .ghostbtn{font-size:11px; padding:3px 9px; color:var(--text-3); background:transparent;}
   #viewBtn.on{background:var(--spring); border-color:var(--spring); color:#fff; font-weight:600;}
   #viewBtn:disabled{opacity:.45; cursor:not-allowed;}
   .readout{display:flex; flex-wrap:wrap; gap:6px 20px; font-size:13.5px; margin-top:8px;
@@ -141,11 +142,12 @@
       <button id="playBtn">▶ スタート</button>
       <button id="slowBtn">🐢 スロー</button>
       <button id="resetBtn">リセット</button>
+      <button id="forceBtn" class="ghostbtn">力の矢印を隠す</button>
       <button id="normalBtn" class="modebtn on">通常モード(ばねから離れる)</button>
       <button id="stickBtn" class="modebtn">もしも小球がばねから離れなかったら</button>
     </div>
     <div class="v0panel">
-      <div class="v0title">■ ばねから離れた瞬間の速さ v₀ を選ぼう</div>
+      <div class="v0title">■ ばねから離れる瞬間の速さ「 v₀ 」を変えてみよう。最高到達点の高さが変わります</div>
       <div class="ctl" style="width:100%; max-width:540px;">
         <label>v₀ = l√(k/m) = <b id="v0Val" style="font-size:17px;">2.00</b> m/s<br>
         <span style="color:var(--text-3)">(v₀を変更すると縮み l も連動して変わる)</span></label>
@@ -248,6 +250,7 @@
     stick:false,             // true: ばねから離れない(単振動を続ける)
     view:'ground',           // ground: 静止系 / cart: 台B上の観測者
     paused:false,
+    showF:true,
     phase:'ready',           // ready / spring / track / projectile / landed
     t:0, speed:0.25,
     // spring 解析解: c(τ)=c0 cosωτ + (vin/ω) sinωτ
@@ -475,7 +478,8 @@
   function current(){
     const a = alpha();
     if (S.phase==='ready'){
-      return {vc:0, vb:0, N:S.m*G, c:S.l, phi:null, seg:'PW'};
+      return {vc:0, vb:0, N:S.m*G, c:S.l, phi:null, seg:'PW',
+              F:S.k*S.l, Fx:-S.k*S.l};   // 縮んだばねの弾性力(左向き)
     }
 
     if (S.phase==='spring'){
@@ -710,6 +714,7 @@
     const fs = Math.min(46/(S.m*G), 46/(S.m*G));
     const cap = v => Math.sign(v)*Math.min(Math.abs(v),110);
     // 重力
+    if (S.showF){
     arrow(ctx,cxp,cyp,cxp,cyp+cap(S.m*G*fs),css('--text-2'),'mg',6,4);
     if (S.phase!=='projectile' && S.phase!=='landed'){
       // 垂直抗力
@@ -721,7 +726,8 @@
       // 弾性力
       if (cur.F && cur.F>0.3){
         const dxF=cap(cur.Fx*fs);
-        arrow(ctx,cxp,cyp,cxp+dxF,cyp,css('--spring'),'弾性力',dxF<0?-52:8,-8);
+        const fx0=cxp+rb;                    // ばねと小球の接点
+        arrow(ctx,fx0,cyp,fx0+dxF,cyp,css('--spring'),'弾性力',dxF<0?-52:8,-8);
         if (S.mode==='free'){
           // 反作用:ばねが壁W(台B)に及ぼす力
           arrow(ctx,bx(XW),sy,bx(XW)-dxF,sy,css('--bad'),'ばねがBに及ぼす力',6,-8);
@@ -733,6 +739,7 @@
         const footx=px(S.XB+T.x+vOff), footy=py(T.y);
         arrow(ctx,footx,footy,footx-cap(cur.N*fs*T.nx),footy+cap(cur.N*fs*T.ny),css('--bad'),'CがBを押す力',-40,18);
       }
+    }
     }
     // ---- 速度矢印 ----
     const vs = 26;
@@ -811,11 +818,12 @@
 
     // ---- 吹き出し(イベントごとに2秒表示) ----
     const nowR = performance.now();
-    const bub = S.bubbles.find(b => nowR>=b.t0 && nowR<b.t1 &&
+    let bub = S.bubbles.find(b => nowR>=b.t0 && nowR<b.t1 &&
                  !(S.phase==='landed' && b.text==='斜方投射中') &&
                  !(b.seg && !(S.phase==='track' && trk(S.tr.s).seg===b.seg)));
+    if (!bub && S.phase==='ready') bub = {text:'静止(v=0)', tone:'v'};
     if (bub){
-      const colMap = {good:css('--good'), bad:css('--bad'), v:css('--series-v')};
+      const colMap = {good:css('--good'), bad:css('--bad'), v:css('--series-v'), muted:css('--text-2')};
       const col = colMap[bub.tone] || css('--good');
       ctx.font='bold 13px sans-serif';
       const tw=ctx.measureText(bub.text).width, bw=tw+18, bh=26;
@@ -1058,6 +1066,11 @@
     }
   });
   $('resetBtn').addEventListener('click',reset);
+  $('forceBtn').addEventListener('click',()=>{
+    S.showF = !S.showF;
+    $('forceBtn').textContent = S.showF ? '力の矢印を隠す' : '力の矢印を表示';
+    draw();
+  });
   function setStick(v){
     S.stick=v;
     $('normalBtn').classList.toggle('on',!v);

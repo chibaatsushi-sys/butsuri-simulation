@@ -103,6 +103,7 @@
   #eqNum{font-size:12.5px; color:var(--text-2); font-variant-numeric:tabular-nums; min-height:17px;}
   #eqNote{font-size:11.5px; color:var(--text-3);}
   #slowBtn.on{background:var(--series-N); border-color:var(--series-N); color:#fff;}
+  .ghostbtn{font-size:11px; padding:3px 9px; color:var(--text-3); background:transparent;}
   .viewbtn{font-weight:600;}
   .viewbtn.on{background:var(--series-v); border-color:var(--series-v); color:#fff;}
 
@@ -145,6 +146,7 @@
       <button class="primary" id="playBtn">▶ スタート</button>
       <button id="slowBtn">🐢 スロー</button>
       <button id="resetBtn">リセット</button>
+      <button id="forceBtn" class="ghostbtn">力の矢印を隠す</button>
     </div>
     <div class="ctl">
       <label>車を自分で動かす=角度αを手動で変える<br>α = <span id="scrubval">0°</span></label>
@@ -218,6 +220,7 @@
     aPrevStep: 0, topT: 0, detachT: 0, turnT: 0,
     scrubOK: true,
     viewRot: false,        // true: 一緒に円運動する観測者(非慣性系)から見る
+    showF: true,           // 力の矢印の表示
   };
   const SQ2 = Math.SQRT2, SQ5 = Math.sqrt(5);
 
@@ -404,7 +407,7 @@
     const vScale = 60*kf/Math.max(v0(),1e-9); // v0 を60px×縮尺に
     if (!ghost) {
       // mg(下向き。非慣性系では傾いて見える)
-      {
+      if (S.showF){
         const gv = TRp(0, -1), L = S.m*S.g*fScale;
         arrow(ctx, cpx, cpy, cpx + gv[0]*L, cpy - gv[1]*L, css('--mg-col'), 'mg');
       }
@@ -412,7 +415,7 @@
         // N(中心向き)
         const nx = (cx-cpx), ny = (cy-cpy), nl = Math.hypot(nx,ny);
         const Nlen = NNow*fScale;   // 上限で切らず、常に N に比例した長さ
-        if (NNow > 1e-6) arrow(ctx, cpx, cpy, cpx + nx/nl*Nlen, cpy + ny/nl*Nlen, css('--series-N'), 'N');
+        if (S.showF && NNow > 1e-6) arrow(ctx, cpx, cpy, cpx + nx/nl*Nlen, cpy + ny/nl*Nlen, css('--series-N'), 'N');
         // v(接線・始点は車の外)— 非慣性系では車は静止して見えるので描かない
         if (!rot){
           const tv = velOf(aEff, 1); const tl = Math.hypot(tv[0],tv[1]);
@@ -425,7 +428,7 @@
           }
         }
         // 遠心力(非慣性系のみ現れる見かけの力)
-        if (rot && isFinite(vNow)){
+        if (S.showF && rot && isFinite(vNow)){
           const Fc = S.m*vNow*vNow/S.R;
           if (Fc > 1e-6){
             const ox = (cpx-cx), oy = (cpy-cy), ol = Math.hypot(ox,oy)||1;
@@ -887,6 +890,11 @@
   $('slowBtn').addEventListener('click', ()=>{
     S.slow = !S.slow;
     $('slowBtn').classList.toggle('on', S.slow);
+  });
+  $('forceBtn').addEventListener('click', ()=>{
+    S.showF = !S.showF;
+    $('forceBtn').textContent = S.showF ? '力の矢印を隠す' : '力の矢印を表示';
+    drawAnim();
   });
   function syncViewBtns(){
     $('inertialBtn').classList.toggle('on', !S.viewRot);
