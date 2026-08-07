@@ -111,6 +111,10 @@
       <button id="stickBtn" class="modebtn">もしも小球がばねから離れなかったら</button>
       <button id="forceBtn" class="ghostbtn">力の矢印を隠す</button>
     </div>
+    <div class="ctl">
+      <label>時間 t を手動で変える&nbsp; t = <span id="scrubTval">0.00</span> s</label>
+      <input type="range" id="tScrub" min="0" max="2" step="0.005" value="0" style="width:200px">
+    </div>
   </div>
 
   <div class="card">
@@ -269,9 +273,9 @@
     const fpx = Math.min(46*s/mg, 84*s/Math.max(F0,1e-9));   // 共通スケール [px/N]
     // 重力(下)
     if (S.showF){
-    arrow(ctx, ballX, ballY, ballX, ballY + mg*fpx, css('--mg-col'), 'mg');
+    arrow(ctx, ballX+4, ballY, ballX+4, ballY + mg*fpx, css('--mg-col'), 'mg');   // 少し右にずらして N と重ならないように
     // 垂直抗力(上)
-    arrow(ctx, ballX, ballY + rB, ballX, ballY + rB - mg*fpx, css('--series-N'), 'N');   // 始点=床との接点
+    arrow(ctx, ballX-4, ballY + rB, ballX-4, ballY + rB - mg*fpx, css('--series-N'), 'N');   // 始点=床との接点(少し左にずらす)
     // 弾性力 — 接触中のみ(縮み c>0 なら左向き、伸び c<0 なら右向き)
     if (inContact && Math.abs(Fspr) > 1e-6){
       const bx0 = ballX + rB;                      // ばねと小球の接点
@@ -502,8 +506,15 @@
     $('vTheory').textContent = vSep().toFixed(3);
   }
 
+  function tScrubMax(){
+    if (S.mode==='stick') return 4*Math.PI*Math.sqrt(S.m/S.k);   // 2周期ぶん
+    const gm = geo();
+    const distMax = Math.max(0.1, (gm.xn - 15 - 30*gm.s - 8)/gm.SC);
+    return tSep() + distMax/vSep();
+  }
   function reset(){
     S.phase='ready'; S.t=0; S.running=false; S.sepT=0; S.sepRealT=0;   // スロー設定は保持
+    if ($('tScrub')){ $('tScrub').max=tScrubMax().toFixed(3); $('tScrub').value=0; $('scrubTval').textContent='0.00'; }
     setMsg(''); updatePlayBtn(); updateTheory();
   }
 
@@ -523,6 +534,15 @@
   $('forceBtn').addEventListener('click', ()=>{
     S.showF = !S.showF;
     $('forceBtn').textContent = S.showF ? '力の矢印を隠す' : '力の矢印を表示';
+  });
+  $('tScrub').addEventListener('input', e=>{
+    const tv = parseFloat(e.target.value);
+    S.running=false; S.sepRealT=0;
+    if (tv<=0){ S.phase='ready'; S.t=0; }
+    else if (S.mode==='stick'){ S.phase='shm'; S.t=tv; }
+    else { const ts=tSep(); S.t=tv; S.sepT=ts; S.phase = tv<ts ? 'shm' : 'free'; }
+    $('scrubTval').textContent=S.t.toFixed(2);
+    updatePlayBtn();
   });
 
   // ---- x-t / v-t / a-t の3つ表示切り替え ----
@@ -601,6 +621,8 @@
     if (last==null) last=ts;
     const dt=Math.min((ts-last)/1000, 0.05); last=ts;
     if (S.running && (S.phase==='shm' || S.phase==='free')){
+      $('tScrub').value=Math.min(S.t, parseFloat($('tScrub').max));
+      $('scrubTval').textContent=S.t.toFixed(2);
       const prevT = S.t;
       S.t += dt*S.speed*(S.slow?0.25:1);
       if (S.mode==='launch' && prevT < tSep() && S.t >= tSep()){

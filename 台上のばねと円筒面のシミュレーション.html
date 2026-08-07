@@ -142,7 +142,13 @@
       <button id="playBtn">▶ スタート</button>
       <button id="slowBtn">🐢 スロー</button>
       <button id="resetBtn">リセット</button>
+      <div style="flex-basis:100%; height:0;"></div>
       <button id="forceBtn" class="ghostbtn">力の矢印を隠す</button>
+      <button id="obsBtn" class="ghostbtn">観測者を隠す</button>
+      <div class="ctl">
+        <label>時間 t を手動で変える&nbsp; t = <span id="scrubTval">0.000</span> s</label>
+        <input type="range" id="tScrub" min="0" max="4" step="0.01" value="0" style="width:200px">
+      </div>
       <button id="normalBtn" class="modebtn on">通常モード(ばねから離れる)</button>
       <button id="stickBtn" class="modebtn">もしも小球がばねから離れなかったら</button>
     </div>
@@ -154,14 +160,8 @@
         <input id="v0In" type="range" min="0.3" max="3.5" step="0.01" value="2.00">
       </div>
       <div class="ctl" style="margin-top:8px;">
-        <label>特徴的な v₀ を試す(この装置では θ=30°, h=0.2 m, r=0.25 m)</label>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="v0btn" data-v="0.70">0.70 → 逆戻り</button>
-          <button class="v0btn" data-v="0.99">√(2g(r−h))≒0.99 → ちょうどT</button>
-          <button class="v0btn" data-v="2.00">2.00 → 途中でN=0</button>
-          <button class="v0btn" data-v="2.89">√(g(5r−2h))≒2.89 → ちょうどU</button>
-          <button class="v0btn" data-v="3.20">3.20 → Uを通過</button>
-        </div>
+        <label id="v0presetLabel">特徴的な v₀ を試す　※この装置はθ=30°, h=0.2 m, r=0.25 mなのでその値をもとに計算</label>
+        <div id="v0presets" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
       </div>
     </div>
     <div class="controls" style="margin-top:10px;">
@@ -251,6 +251,7 @@
     view:'ground',           // ground: 静止系 / cart: 台B上の観測者
     paused:false,
     showF:true,
+    showObs:true,
     phase:'ready',           // ready / spring / track / projectile / landed
     t:0, speed:0.25,
     // spring 解析解: c(τ)=c0 cosωτ + (vin/ω) sinωτ
@@ -268,6 +269,7 @@
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
   function addBub(text, delay, dur, tone, seg){
+    if (S.scrubbing) return;
     const t0 = performance.now() + delay;
     S.bubbles.push({text, t0, t1: t0+dur, tone, seg});
   }
@@ -419,7 +421,8 @@
         S.vB = -a*T.tx*w;
         if (T.seg==='arc'){
           const N = Ncalc(s, w*w);
-          if (N <= 0 && w > 0){           // 面から離れる
+          if (N <= 0 && w > 0.15){        // 面から離れる(十分な速さがある場合のみ。
+                                          // 境界(ちょうどT)では v≈0 なので離れずに引き返す)
             addBub('離れた!', 0, 700, 'bad');
             addBub('斜方投射中', 700, 2000, 'v');
             S.ev.outcome='detach';
@@ -461,6 +464,7 @@
   }
 
   function showBanner(){
+    if (S.scrubbing) return;
     const b = $('banner');
     b.style.display='block';
     b.textContent = '台Bが静止した! このとき小球Cは 点T(φ=90°)にいて、鉛直上向きに運動している ― 水平方向の運動量の和が常に 0 だから(問2(h))';
@@ -715,12 +719,13 @@
     const cap = v => Math.sign(v)*Math.min(Math.abs(v),110);
     // 重力
     if (S.showF){
-    arrow(ctx,cxp,cyp,cxp,cyp+cap(S.m*G*fs),css('--text-2'),'mg',6,4);
+    arrow(ctx,cxp+4,cyp,cxp+4,cyp+cap(S.m*G*fs),css('--text-2'),'mg',6,4);   // 少し右にずらして N と重ならないように
     if (S.phase!=='projectile' && S.phase!=='landed'){
       // 垂直抗力
       let nx=0, ny=1;
       if (S.phase==='track'){ const T=trk(S.tr.s); nx=T.nx; ny=T.ny; }
-      const nsx = cxp - rb*nx, nsy = cyp + rb*ny;   // 始点=台Bと小球の接点
+      const offN = ny > 0.9 ? -4 : 0;               // ほぼ鉛直のときは少し左にずらす
+      const nsx = cxp - rb*nx + offN, nsy = cyp + rb*ny;   // 始点=台Bと小球の接点
       arrow(ctx,nsx,nsy,nsx+cap(cur.N*fs*nx),nsy-cap(cur.N*fs*ny),css('--series-N'),
             S.mode==='free' ? 'N(BがCを押す力)' : 'N', 4, -4);
       // 弾性力
@@ -764,7 +769,7 @@
       }
     }
     // ---- 観測者(棒人間) ----
-    {
+    if (S.showObs){
       const sM = Math.min(38, Math.max(24, 0.14*SCALE));
       // 外の観測者:床Aの上に静止(非慣性系ビューでは動いて見える)
       const gAct = S.view==='ground';
@@ -1017,6 +1022,7 @@
       else cp=ballCenter(-current().c);
       S.trail.push([cp.x,cp.y,S.XB]);
       if (S.trail.length>900) S.trail.shift();
+      $('tScrub').value=Math.min(S.t, parseFloat($('tScrub').max)); $('scrubTval').textContent=S.t.toFixed(3);
       renderNow();
     }
     draw();
@@ -1032,8 +1038,52 @@
     drawGraph();
   }
 
+  // 現在のパラメータでの終了時刻(着地まで)をサイレントに計算
+  function computeTEnd(){
+    S.scrubbing = true;
+    S.phase='spring'; S.t=0; S.XB=0; S.vB=0;
+    S.sp={c0:S.l, vin:0, t0:0, XB0:0};
+    S.ev={rel:false, v0:0, w0:0, qr:false, vqr:0, tStop:null, outcome:null, outText:''};
+    let guard=0;
+    while (S.phase!=='landed' && S.t < 4 - 1e-9 && guard++ < 1100){ stepSim(0.004); }
+    const te = S.phase==='landed' ? S.t : 4;
+    S.scrubbing = false;
+    return te;
+  }
+
+  // 時間スクラブ:最初から t まで高速に再計算する
+  function scrubTo(tTarget){
+    if (tTarget <= 0){ reset(); return; }
+    S.scrubbing = true;
+    S.phase='spring'; S.t=0; S.XB=0; S.vB=0;
+    S.sp={c0:S.l, vin:0, t0:0, XB0:0};
+    S.ev={rel:false, v0:0, w0:0, qr:false, vqr:0, tStop:null, outcome:null, outText:''};
+    S.trail=[]; S.data={t:[],vc:[],vb:[],vg:[]}; S.bubbles=[];
+    $('banner').style.display='none'; $('msg1').innerHTML=''; $('msg2').innerHTML='';
+    const step=0.004; let guard=0;
+    while (S.t < tTarget - 1e-9 && S.phase!=='landed' && guard++ < 4000){
+      stepSim(Math.min(step, tTarget - S.t));
+      const cur=current(), vcx=vcxNow();
+      S.data.t.push(S.t);
+      S.data.vc.push(S.mode==='free' ? vcx : cur.vc);
+      S.data.vb.push(cur.vb);
+      S.data.vg.push((S.m*vcx + S.M*cur.vb)/(S.m+S.M));
+      let cp;
+      if (S.phase==='projectile'||S.phase==='landed') cp={x:S.pj.x,y:S.pj.y};
+      else if (S.phase==='track') cp=ballCenter(S.tr.s);
+      else cp=ballCenter(-current().c);
+      S.trail.push([cp.x,cp.y,S.XB]);
+    }
+    S.scrubbing = false;
+    S.paused = true;
+    if (S.ev.tStop) showBanner();
+    $('playBtn').textContent = S.phase==='landed' ? '↺ リセット' : '▶ 再開';
+    renderNow(); draw(); drawGraph();
+  }
+
   // ================= 操作 =================
   function reset(){
+    const tEnd = (typeof stepSim==='function') ? computeTEnd() : 4;
     S.phase='ready'; S.t=0; S.XB=0; S.vB=0; S.c=S.l; S.paused=false;
     S.sp={c0:S.l, vin:0, t0:0, XB0:0};
     S.ev={rel:false, v0:0, w0:0, qr:false, vqr:0, tStop:null, outcome:null, outText:''};
@@ -1041,7 +1091,10 @@
     $('msg1').innerHTML=''; $('msg2').innerHTML='';
     $('banner').style.display='none';
     $('playBtn').textContent='▶ スタート';
-    initCanvas(); updateFormulas(); if (typeof syncV0UI==='function') syncV0UI();
+    if ($('tScrub')){ $('tScrub').max=Math.max(0.2,tEnd).toFixed(2); $('tScrub').value=0; $('scrubTval').textContent='0.000'; }
+    initCanvas(); updateFormulas();
+    if (typeof buildV0Presets==='function') buildV0Presets();
+    if (typeof syncV0UI==='function') syncV0UI();
     { const scEl=$('animScroll'); if (scEl) scEl.scrollLeft = scEl.scrollWidth; }
     $('anim').style.touchAction = 'none';   // スタート前は小球ドラッグを優先
     S.xG0 = (S.M*BCM.x + S.m*ballCenter(-S.l).x)/(S.M+S.m);
@@ -1070,6 +1123,15 @@
     S.showF = !S.showF;
     $('forceBtn').textContent = S.showF ? '力の矢印を隠す' : '力の矢印を表示';
     draw();
+  });
+  $('obsBtn').addEventListener('click',()=>{
+    S.showObs = !S.showObs;
+    $('obsBtn').textContent = S.showObs ? '観測者を隠す' : '観測者を表示';
+    draw();
+  });
+  $('tScrub').addEventListener('input', e=>{
+    scrubTo(parseFloat(e.target.value));
+    $('tScrub').value=S.t; $('scrubTval').textContent=S.t.toFixed(3);
   });
   function setStick(v){
     S.stick=v;
@@ -1143,6 +1205,37 @@
       b.classList.toggle('sel', Math.abs(parseFloat(b.dataset.v)-v0)<0.02);
     });
   }
+  // 特徴的な v₀(モードと質量に応じて変わる)
+  function v0Chars(){
+    const vT = Math.sqrt(2*G*(R-Hh));                              // ちょうどT(両モード共通)
+    const vU = S.mode==='free'
+      ? Math.sqrt(G*R*S.M/(S.M+S.m) + 2*G*(2*R-Hh))               // 問2:エネルギーがBにも分配される
+      : Math.sqrt(G*(5*R-2*Hh));                                   // 問1:√(g(5r−2h))
+    return {vT, vU};
+  }
+  function buildV0Presets(){
+    const box=$('v0presets');
+    if (!box) return;
+    const {vT,vU}=v0Chars();
+    const mid=(vT+vU)/2, over=vU*1.1;
+    const defs=[
+      [0.70, '0.70 → 逆戻り'],
+      [vT,  '√(2g(r−h))≒'+vT.toFixed(2)+' → ちょうどT'],
+      [mid,  mid.toFixed(2)+' → 途中でN=0'],
+      [vU,  (S.mode==='free' ? vU.toFixed(2) : '√(g(5r−2h))≒'+vU.toFixed(2))+' → ちょうどU'],
+      [over, over.toFixed(2)+' → Uを通過'],
+    ];
+    box.innerHTML='';
+    defs.forEach(([v,lb])=>{
+      const b=document.createElement('button');
+      b.className='v0btn'; b.dataset.v=v.toFixed(3); b.textContent=lb;
+      b.addEventListener('click',()=>setV0(parseFloat(b.dataset.v)));
+      box.appendChild(b);
+    });
+    $('v0presetLabel').textContent = S.mode==='free'
+      ? '特徴的な v₀ を試す(問2の値:M と m によって変わる)'
+      : '特徴的な v₀ を試す\u3000※この装置はθ=30°, h=0.2 m, r=0.25 mなのでその値をもとに計算';
+  }
   function setV0(v){
     let l=v*Math.sqrt(S.m/S.k);
     l=Math.min(0.45,Math.max(0.02,Math.round(l*1000)/1000));
@@ -1150,7 +1243,6 @@
     reset();
   }
   $('v0In').addEventListener('input',()=>setV0(parseFloat($('v0In').value)));
-  document.querySelectorAll('.v0btn').forEach(b=>b.addEventListener('click',()=>setV0(parseFloat(b.dataset.v))));
 
   // 小球ドラッグで l を変える
   let dragging=false;

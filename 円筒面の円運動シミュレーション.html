@@ -147,6 +147,7 @@
       <button id="slowBtn">🐢 スロー</button>
       <button id="resetBtn">リセット</button>
       <button id="forceBtn" class="ghostbtn">力の矢印を隠す</button>
+      <button id="obsBtn" class="ghostbtn">観測者を隠す</button>
     </div>
     <div class="ctl">
       <label>車を自分で動かす=角度αを手動で変える<br>α = <span id="scrubval">0°</span></label>
@@ -221,6 +222,7 @@
     scrubOK: true,
     viewRot: false,        // true: 一緒に円運動する観測者(非慣性系)から見る
     showF: true,           // 力の矢印の表示
+    showObs: true,         // 観測者(棒人間)の表示
   };
   const SQ2 = Math.SQRT2, SQ5 = Math.sqrt(5);
 
@@ -481,7 +483,7 @@
     }
 
     // ---- 観測者(棒人間) ----
-    {
+    if (S.showObs){
       const sM = 40*kf;
       // 外の観測者:地面の上(円の右外)。非慣性系では回って見える
       const gpos = TRp((Rpx+26)/sc, -(Rpx+8)/sc);
@@ -894,6 +896,11 @@
   $('forceBtn').addEventListener('click', ()=>{
     S.showF = !S.showF;
     $('forceBtn').textContent = S.showF ? '力の矢印を隠す' : '力の矢印を表示';
+    drawAnim();
+  });
+  $('obsBtn').addEventListener('click', ()=>{
+    S.showObs = !S.showObs;
+    $('obsBtn').textContent = S.showObs ? '観測者を隠す' : '観測者を表示';
     drawAnim();
   });
   function syncViewBtns(){
