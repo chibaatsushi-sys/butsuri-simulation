@@ -280,12 +280,15 @@ class Painter{
     c.fillStyle=fill||"#fff"; c.fill(); c.strokeStyle=stroke||COL.ink; c.lineWidth=lw||2; c.stroke(); c.restore();
   }
   /* 地面（ハッチング） */
-  ground(y,x0,x1,col){
+  ground(y,x0,x1,col,offPx){
     const c=this.c; c.save(); c.strokeStyle=col||"#333"; c.lineWidth=1.8;
     c.beginPath(); c.moveTo(this.X(x0),this.Y(y)); c.lineTo(this.X(x1),this.Y(y)); c.stroke();
     c.lineWidth=1.1; c.strokeStyle=col||"#555";
     const step=9, X0=this.X(x0), X1=this.X(x1), Y=this.Y(y);
-    for(let X=X0; X<X1; X+=step){ c.beginPath(); c.moveTo(X,Y); c.lineTo(X-7,Y+8); c.stroke(); }
+    const ph=(((offPx||0)%step)+step)%step;
+    c.save(); c.beginPath(); c.rect(X0,Y,X1-X0,14); c.clip();
+    for(let X=X0+ph; X<X1+step; X+=step){ c.beginPath(); c.moveTo(X,Y); c.lineTo(X-7,Y+8); c.stroke(); }
+    c.restore();
     c.restore();
   }
   /* 壁（縦のハッチング） */
@@ -430,15 +433,15 @@ class Painter{
     if(label){ const am=(a0+a1)/2; this.mtext(this.X(x)+Math.cos(am)*this.L(r)*1.42, this.Y(y)-Math.sin(am)*this.L(r)*1.42, label,{col:C,size:13,align:"center"}); }
   }
   /* 観測者（棒人間） */
-  observer(x,y,label){
-    const c=this.c, X=this.X(x), Y=this.Y(y), h=30;
-    c.save(); c.strokeStyle="#8b96a2"; c.fillStyle="#8b96a2"; c.lineWidth=1.6; c.lineCap="round";
+  observer(x,y,label,col){
+    const c=this.c, X=this.X(x), Y=this.Y(y), h=30, CC=col||"#8b96a2";
+    c.save(); c.strokeStyle=CC; c.fillStyle=CC; c.lineWidth=1.7; c.lineCap="round";
     c.beginPath(); c.arc(X,Y-h,4.4,0,7); c.fillStyle="#fff"; c.fill(); c.stroke();
     c.beginPath(); c.moveTo(X,Y-h+4.4); c.lineTo(X,Y-h+16); c.stroke();
     c.beginPath(); c.moveTo(X-7,Y-h+9); c.lineTo(X+7,Y-h+11); c.stroke();
     c.beginPath(); c.moveTo(X,Y-h+16); c.lineTo(X-6,Y); c.moveTo(X,Y-h+16); c.lineTo(X+6,Y); c.stroke();
     c.restore();
-    if(label!==false) this.jtext(X, Y+12, "観測者", {size:10.5, align:"center", col:"#a8b2bd"});
+    if(label!==false) this.jtext(X, Y+13, (typeof label==="string"?label:"観測者"), {size:10.5, align:"center", col:col||"#a8b2bd", bold:!!col});
   }
   /* 吹き出し（物体に追従） */
   bubble(Xpx,Ypx,text,col,sub){
@@ -625,7 +628,8 @@ function drawSnaps(ctx, W, sc, hcap){
     ctx.save(); ctx.beginPath(); ctx.rect(px,0,L.pw,L.H); ctx.clip();
     P.setView(L.s, px+(L.pw-L.wW*L.s)/2 - sc.world.x0*L.s, 22+sc.world.y1*L.s);
     sc.draw(P, sc.st(sn.t), sn.t, {labels:(i===0), allForces:!!sn.forces, forces:!!sn.forces,
-                                   inter:true, obs:false, started:true, snap:true, t:sn.t});
+                                   inter:true, obs:false, started:true, snap:true,
+                                   onlyInner:!!sn.onlyInner, t:sn.t});
     ctx.restore();
     P.jtext(px+L.pw/2, 12, sn.label, {size:12, align:"center", col:"#31465e", bold:true});
     if(i>0){ ctx.save(); ctx.strokeStyle="#e6eaef"; ctx.lineWidth=1;
@@ -743,6 +747,13 @@ class Sim{
     this.bLab=this.mkBtn("記号を表示","tiny",()=>{ this.showLab=!this.showLab;
       this.bLab.textContent=this.showLab?"記号を隠す":"記号を表示"; this.bLab.classList.toggle("on",this.showLab); this.draw(); });
     r2.appendChild(this.bF); r2.appendChild(this.bLab);
+    if(sc.cmFrame){
+      this.cmOn=false;
+      this.bCM=this.mkBtn("👁 重心系の観測者から見た運動","tiny",()=>{ this.cmOn=!this.cmOn;
+        this.bCM.textContent=this.cmOn?"👁 地面から見た運動にもどす":"👁 重心系の観測者から見た運動";
+        this.bCM.classList.toggle("on",this.cmOn); this.draw(); });
+      r2.appendChild(this.bCM);
+    }
 
     this.msg=document.createElement("div"); this.msg.className="msgbox empty"; this.msg.innerHTML=EMPTY_MSG; h.appendChild(this.msg);
 
@@ -927,7 +938,7 @@ class Sim{
     const sc=this.sc, P=this.P, c=this.ctx, t=this.t;
     c.clearRect(0,0,this.cssW,this.cssH);
     const st=sc.st(t);
-    const opt={forces:this.showF, allForces:this.showF, inter:true, obs:false, labels:this.showLab, started:this.started, t:t};
+    const opt={forces:this.showF, allForces:this.showF, inter:true, obs:false, labels:this.showLab, started:this.started, cm:!!this.cmOn, t:t};
     sc.draw(P,st,t,opt);
     // スタート前の「静止」吹き出し
     if(!this.started && sc.preBubbles){
@@ -1416,11 +1427,11 @@ function SC6(){
     id:"q6", world:{x0:2.3,x1:7.2,y0:0.55,y1:5.05}, minPxPerM:66, maxH:320, tEnd,
     assume:'数値は $m=1.0$ kg、$M=2.0$ kg、弾性衝突（$e=1$）として計算。図は水平面を真上から見たもの。',
     slowmo:{t0:Math.max(0,t1-0.05), t1:t1+DT+0.10, k:0.10},
-    snaps:[{label:"(a) 衝突前",t:0.35},{label:"衝突中",t:t1+DT*0.5,forces:false},{label:"(b) 衝突後",t:1.35}],
+    snaps:[{label:"(a) 衝突前",t:0.35},{label:"衝突中",t:t1+DT*0.5,forces:false,onlyInner:true},{label:"(b) 衝突後",t:1.35}],
     momFig:{ title:"■ 運動量ベクトルの和（衝突前 → 衝突後）", H:206, sc:40,
       t1:"衝突前の運動量", t2:"衝突後の運動量",
       note:"運動量の和（大きさも向きも）は変わらない",
-      sum1:"m@v+M@V", sum2:"m@v'+M@V'", sumT1:0.5, sumOff1:-20, sumT2:0.82, sumOff2:-31,
+      sum1:"m@v+M@V", sum2:"m@v'+M@V'", sumT1:0.5, sumOff1:-20, sumT2:0.52, sumOff2:24,
       before:[{p:[m1*v1[0],m1*v1[1]],col:COL.A,lab:"m@v",side:-1},
               {p:[m2*v2[0],m2*v2[1]],col:COL.B,lab:"M@V",side:1}],
       after :[{p:[m1*v1p[0],m1*v1p[1]],col:COL.A,lab:"m@v'",side:-1},
@@ -1441,21 +1452,25 @@ function SC6(){
       for(let y=1;y<4.1;y+=1){ P.c.beginPath(); P.c.moveTo(P.X(2.4),P.Y(y)); P.c.lineTo(P.X(7.1),P.Y(y)); P.c.stroke(); }
       P.c.restore();
       P.jtextW(2.4,4.30,"上から見た図（なめらかな水平面）",{size:11,col:"#aab3bd",cap:1});
-      P.vec(2.5,0.95,30,0,"#c3ccd6","x",{off:9,lw:1.2,size:12});
-      P.vec(2.5,0.95,0,-30,"#c3ccd6","y",{off:9,lw:1.2,size:12});
+      if(!o.onlyInner){
+        P.vec(2.5,0.95,30,0,"#c3ccd6","x",{off:9,lw:1.2,size:12});
+        P.vec(2.5,0.95,0,-30,"#c3ccd6","y",{off:9,lw:1.2,size:12});
+      }
       P.ball(s.p1[0],s.p1[1],r1,"#fff",COL.ink,2.2);
       P.ball(s.p2[0],s.p2[1],r2,"#fff",COL.ink,2.2);
       if(o.labels){ P.mtextW(s.p1[0]-0.48,s.p1[1]+0.34,"m",{size:15,align:"center",col:COL.A});
         P.mtextW(s.p2[0]-0.60,s.p2[1]+0.38,"M",{size:15,align:"center",col:COL.B}); }
-      vArrow2(P,s.p1[0],s.p1[1]+r1+0.14,s.u1[0],s.u1[1],26,t<t1?"v":"v'",COL.v);
-      vArrow2(P,s.p2[0],s.p2[1]-r2-0.14,s.u2[0],s.u2[1],26,t<t1?"V":"V'",COL.v);
+      if(!o.onlyInner){
+        vArrow2(P,s.p1[0],s.p1[1]+r1+0.14,s.u1[0],s.u1[1],26,t<t1?"@v":"@v'",COL.A);
+        vArrow2(P,s.p2[0],s.p2[1]-r2-0.14,s.u2[0],s.u2[1],26,t<t1?"@V":"@V'",COL.B);
+      }
       if(s.contact && o.inner!==false){
         const cx=(s.p1[0]*r2+s.p2[0]*r1)/(r1+r2), cy=(s.p1[1]*r2+s.p2[1]*r1)/(r1+r2);
         P.vec(cx,cy,-n[0]*46, n[1]*46,COL.inner,"F",{off:11,lw:2.8,head:9});
         P.vec(cx,cy, n[0]*46,-n[1]*46,COL.inner,"F",{off:11,lw:2.8,head:9});
         P.c.save(); P.c.beginPath(); P.c.arc(P.X(cx),P.Y(cy),4.5,0,7); P.c.fillStyle=COL.inner; P.c.fill(); P.c.restore();
       }
-      if(!o.figure){                    // 運動量ベクトルの和（衝突前・中・後でつねに同じ）
+      if(!o.figure && !o.onlyInner){     // 運動量ベクトルの和（衝突前・中・後でつねに同じ）
         const Px=m1*s.u1[0]+m2*s.u2[0], Py=m1*s.u1[1]+m2*s.u2[1], K=26;
         P.jtextW(2.44,4.97,"運動量の和（つねに同じ）",{size:10.5,col:"#1b1f24",bold:true});
         P.arrowPx(2.46,4.60,Px*K,-Py*K,"#1b1f24",3.2,12);
@@ -1526,8 +1541,6 @@ function SC7(){
         c.save(); c.beginPath(); c.arc(P.X(s.bx),P.Y(s.by),5,0,7); c.fillStyle=COL.inner; c.fill(); c.restore();
         // 水平成分だけを取り出して比べる（地面の下の余白に）
         const xc=s.Xw+base*0.52, yy=-0.55;
-        if(!o.snap){ c.save(); c.strokeStyle="#f9a3d3"; c.setLineDash([3,3]); c.lineWidth=1;
-          c.beginPath(); c.moveTo(P.X(s.bx),P.Y(s.by)); c.lineTo(P.X(xc),P.Y(yy)); c.stroke(); c.restore(); }
         P.vec(xc,yy, Nx,0,COL.inner,"N_x",{off:12,lw:2.6,head:13,size:13});
         P.vec(xc,yy,-Nx,0,COL.inner,"N_x",{off:12,lw:2.6,head:13,size:13});
         c.save(); c.beginPath(); c.arc(P.X(xc),P.Y(yy),4,0,7); c.fillStyle=COL.inner; c.fill(); c.restore();
@@ -1536,6 +1549,7 @@ function SC7(){
       if(o.allForces){
         mgArrow(P,s.bx-bs*0.5*Math.sin(th)+4/P.s, s.by+bs*0.5*Math.cos(th), m,2.4,"mg");
         mgArrow(P,s.Xw+base*0.40,0.55,M,2.4,"Mg");
+        NArrow(P,s.Xw+base*0.80,0,M*G+Nf*Math.cos(th),2.4,"N_床",-9);
       }
     },
     readout(s,t){ return [{k:MV("v","x")+"（m）",v:fmt(s.vbx,2),u:"m/s",wide:1},{k:MV("v","y")+"（m）",v:fmt(s.vby,2),u:"m/s",wide:1},
@@ -1601,6 +1615,7 @@ function SC8(){
       if(o.allForces){
         mgArrow(P,s.bx-bs*0.5*Math.sin(th)+4/P.s, s.by+bs*0.5*Math.cos(th), m,3.0,"mg");
         mgArrow(P,Xw+base*0.40,0.55,M,3.0,"Mg");
+        NArrow(P,Xw+base*0.62,0,M*G+Nf*Math.cos(th),3.0,"N_床",-9);
       }
     },
     readout(s,t){ return [{k:MV("v","x")+"（m）",v:fmt(s.vbx,2),u:"m/s",wide:1},{k:MV("v","y")+"（m）",v:fmt(s.vby,2),u:"m/s",wide:1},
@@ -1636,7 +1651,7 @@ function SC9(){
       return {x1:Xc-d/2, x2:Xc+d/2, v1:-dd/2, v2:dd/2, d, u:d-L0}; },
     preBubbles(s){ return [{x:s.x1,y:r+1.80,text:"静止 v=0",col:COL.A},{x:s.x2,y:r+1.80,text:"静止 v=0",col:COL.B}]; },
     draw(P,s,t,o){
-      const yF=r+0.20, yCap=r+0.50, yLab=r+0.92, yV=r+1.30;
+      const yF=r+0.20, yCap=r+0.76, yLab=r+1.10, yV=r+1.44;
       P.ground(0,0.72,5.28);
       P.jtextW(0.74,-0.84,"なめらかで水平な床",{size:11,col:"#aab3bd",cap:1});
       if(!o.figure){
@@ -1652,9 +1667,12 @@ function SC9(){
         P.mtextW(s.x2,yLab,"m",{size:15,align:"center",col:COL.B}); }
       vArrow(P,s.x1,yV,s.v1,26,"v_1",COL.v,0,true);
       vArrow(P,s.x2,yV,s.v2,26,"v_2",COL.v,0,true);
-      if(o.inner!==false && Math.abs(s.u)>0.03){ const gap=P.L(s.x2-s.x1-2*r), F=k*s.u, L=Math.min(52,Math.abs(F)*3.6,gap*0.40)*(F>=0?1:-1);
-        P.vec(s.x1+r,yF, L,0,COL.inner,"F",{off:11,lw:2.8,head:9});
-        P.vec(s.x2-r,yF,-L,0,COL.inner,"F",{off:11,lw:2.8,head:9});
+      if(o.inner!==false && Math.abs(s.u)>0.02){ const F=k*s.u, L=Math.abs(F)*4.0*(F>=0?1:-1);
+        P.arrowPx(s.x1+r,yF, L,0,COL.inner,2.8,9);
+        P.arrowPx(s.x2-r,yF,-L,0,COL.inner,2.8,9);
+        const dw=L*P.k/(2*P.s);
+        P.mtextW(s.x1+r+dw, yF+0.20,"F",{col:COL.inner,size:14,align:"center"});
+        P.mtextW(s.x2-r-dw, yF+0.20,"F",{col:COL.inner,size:14,align:"center"});
         P.jtextW(Xc,yCap,"ばねの弾性力（内力）",{size:10.5,col:COL.inner,align:"center"}); }
       if(o.allForces){
         mgArrow(P,s.x1+3/P.s,r,m,2.4,"mg"); NArrow(P,s.x1,0,m*G,2.4,"N",-8);
@@ -1690,9 +1708,11 @@ function SC10(){
   const mu=m1*m2/(m1+m2), om2=Math.sqrt(k/mu), amp2=v1H/om2;
   const x2f=3.85, XcmH=(m1*(x2f-L0)+m2*x2f)/(m1+m2);
   const r1=0.22,r2=0.30, tB=tH+Math.PI/(2*om2), tEnd=tH+3.30;
+  const Xc0=(m1*(x2f-L0-A1)+m2*x2f)/(m1+m2);   // t=0 の重心の位置
+  let DX=0;                                    // 重心系表示のときの平行移動量
   const E0=0.5*k*A1*A1;
   return {
-    totalOffset:false, showVG:true, id:"q10", world:{x0:1.35,x1:6.55,y0:-1.45,y1:2.85}, minPxPerM:64, maxH:275, tEnd, springE:true,
+    totalOffset:false, showVG:true, cmFrame:true, id:"q10", world:{x0:1.35,x1:6.55,y0:-1.45,y1:2.85}, minPxPerM:64, maxH:275, tEnd, springE:true,
     slowmo:{label:'固定を外す瞬間', t0:Math.max(0,tH-0.05), t1:tH+0.28, k:0.10},
     assume:'数値は $m=1.0$ kg（左）、$2m=2.0$ kg（右）、$k=20$ N/m、自然長 1.3 m、左球を 0.5 m 引いた状態から出発。右球の固定は $t=0.35$ s で外す。',
     snaps:[{label:"(a) 手を放した直後",t:tH+0.004},
@@ -1709,36 +1729,63 @@ function SC10(){
     preBubbles(s){ return [{x:s.x1,y:r2*0.8+1.86,text:"静止 v=0",col:COL.A},
                            {x:s.x2+0.55,y:r2*0.8+1.86,text:"手で押さえている",col:COL.B}]; },
     draw(P,s,t,o){
-      const yc=r2*0.8, yF=yc+0.24, yCap=yc+0.54, yLab=yc+0.98, yV=yc+1.36;
-      P.ground(0,1.38,6.52);
-      P.jtextW(1.40,-0.84,"なめらかで水平な床",{size:11,col:"#aab3bd",cap:1});
-      if(!o.figure){
-        P.c.save(); P.c.strokeStyle="#e6b0b0"; P.c.setLineDash([3,3]); P.c.lineWidth=1;
-        P.c.beginPath(); P.c.moveTo(P.X(s.Xc),P.Y(yc)); P.c.lineTo(P.X(s.Xc),P.Y(-1.05)); P.c.stroke(); P.c.restore();
-        P.jtextW(s.Xc,-1.16, s.hold?"重心":"重心（等速直線運動）",{size:10.5,col:"#c0392b",align:"center"});
+      const yc=r2*0.8, yF=yc+0.24, yCap=yc+0.80, yLab=yc+1.14, yV=yc+1.48;
+      DX = o.cm ? (s.Xc-Xc0) : 0;                       // 重心系なら重心が止まって見えるように平行移動
+      const x1=s.x1-DX, x2=s.x2-DX, Xc=s.Xc-DX;
+      const Vc=(m1*s.v1+m2*s.v2)/(m1+m2);
+      const v1=o.cm? s.v1-Vc : s.v1, v2=o.cm? s.v2-Vc : s.v2;
+      P.ground(0,1.38,6.52,null, o.cm? -DX*P.s : 0);
+      if(o.cm){                          // 重心系では地面が動いて見える → 目印を流す
+        const c2=P.c, step=0.8;
+        c2.save(); c2.strokeStyle="#c9a86a"; c2.lineWidth=2.4; c2.lineCap="round";
+        c2.beginPath(); c2.rect(P.X(1.38),P.Y(0),P.X(6.52)-P.X(1.38),15); c2.clip();
+        for(let g=Math.floor((1.0+DX)/step)*step; g<7.4+DX; g+=step){
+          const X=P.X(g-DX); c2.beginPath(); c2.moveTo(X,P.Y(0)+2); c2.lineTo(X,P.Y(0)+12); c2.stroke();
+        }
+        c2.restore();
       }
-      P.spring(s.x1,yc,s.x2,yc,7,6,"#0f7a5a",2);
-      if(!o.started) P.jtextW((s.x1+s.x2)/2-0.45,-0.40,"ばね",{size:11.5,col:"#0f7a5a",align:"center",bold:true});
-      P.ball(s.x1,r1,r1,"#fff",COL.ink,2.2); P.ball(s.x2,r2,r2,"#fff",COL.ink,2.2);
-      if(!o.figure) P.ball(s.Xc,yc,0.07,"#e02020","#a01010",1.2);
-      if(s.hold){ drawHand(P, s.x2, yc, r2, 1);
-        P.jtextW(s.x2+r2*2.6,yc+0.62,"手で押さえる",{size:10.5,col:"#8a5a12",align:"center"}); }
-      if(o.labels){ P.mtextW(s.x1,yLab,"m",{size:15,align:"center",col:COL.A});
-        P.mtextW(s.x2,yLab,"2m",{size:15,align:"center",col:COL.B}); }
-      vArrow(P,s.x1,yV,s.v1,26,"v_1",COL.v,0,true);
-      vArrow(P,s.x2,yV,s.v2,26,"v_2",COL.v,0,true);
-      if(o.inner!==false && Math.abs(s.u)>0.03){
-        const gap=P.L(s.x2-s.x1-r1-r2), F=k*s.u, L=Math.min(52,Math.abs(F)*3.6,gap*0.40)*(F>=0?1:-1);
-        P.vec(s.x1+r1,yF, L,0,COL.inner,"F",{off:11,lw:2.8,head:9});
-        P.vec(s.x2-r2,yF,-L,0,COL.inner,"F",{off:11,lw:2.8,head:9});
-        P.jtextW((s.x1+s.x2)/2,yCap,"ばねの弾性力（内力）",{size:10.5,col:COL.inner,align:"center"});
+      if(o.cm) P.jtextW(1.40,-1.34,"■ 重心とともに動く観測者から見た運動（グラフは地面から見た値）",
+                        {size:10.5,col:"#7a5aa8",bold:true});
+      else P.jtextW(1.40,-0.84,"なめらかで水平な床",{size:11,col:"#aab3bd",cap:1});
+      if(!o.figure){
+        const yBot=o.snap?-1.05:-0.54;
+        P.c.save(); P.c.strokeStyle="#e6b0b0"; P.c.setLineDash([3,3]); P.c.lineWidth=1;
+        P.c.beginPath(); P.c.moveTo(P.X(Xc),P.Y(yc)); P.c.lineTo(P.X(Xc),P.Y(yBot)); P.c.stroke(); P.c.restore();
+        if(o.snap){
+          P.jtextW(Xc,-1.16,"重心（等速直線運動）",{size:10.5,col:"#c0392b",align:"center"});
+        } else {
+          P.observer(Xc,-0.90,"重心系の観測者","#7a5aa8");
+          P.jtextW(Xc+0.16,-0.28, o.cm?"重心":(s.hold?"重心":"重心（等速直線運動）"),{size:10.5,col:"#c0392b"});
+        }
+      }
+      P.spring(x1,yc,x2,yc,7,6,"#0f7a5a",2);
+      if(!o.started) P.jtextW((x1+x2)/2-0.45,-0.40,"ばね",{size:11.5,col:"#0f7a5a",align:"center",bold:true});
+      P.ball(x1,r1,r1,"#fff",COL.ink,2.2); P.ball(x2,r2,r2,"#fff",COL.ink,2.2);
+      if(!o.figure) P.ball(Xc,yc,0.07,"#e02020","#a01010",1.2);
+      if(s.hold){ drawHand(P, x2, yc, r2, 1);
+        P.jtextW(x2+r2*2.6,yc+0.62,"手で押さえる",{size:10.5,col:"#8a5a12",align:"center"}); }
+      if(o.labels){ P.mtextW(x1,yLab,"m",{size:15,align:"center",col:COL.A});
+        P.mtextW(x2,yLab,"2m",{size:15,align:"center",col:COL.B}); }
+      vArrow(P,x1,yV,v1,26,o.cm?"v_1'":"v_1",COL.v,0,true);
+      vArrow(P,x2,yV,v2,26,o.cm?"v_2'":"v_2",COL.v,0,true);
+      if(o.inner!==false && Math.abs(s.u)>0.02){
+        const F=k*s.u, L=Math.abs(F)*4.0*(F>=0?1:-1);
+        P.arrowPx(x1+r1,yF, L,0,COL.inner,2.8,9);
+        P.arrowPx(x2-r2,yF,-L,0,COL.inner,2.8,9);
+        const dw=L*P.k/(2*P.s);
+        P.mtextW(x1+r1+dw, yF+0.20,"F",{col:COL.inner,size:14,align:"center"});
+        P.mtextW(x2-r2-dw, yF+0.20,"F",{col:COL.inner,size:14,align:"center"});
+        P.jtextW((x1+x2)/2,yCap,"ばねの弾性力（内力）",{size:10.5,col:COL.inner,align:"center"});
       }
       if(o.inner!==false && s.hold && Math.abs(s.u)>0.03){
-        const Fh=k*s.u, L=Math.min(52,Math.abs(Fh)*3.6)*(Fh>=0?1:-1);
-        P.vec(s.x2+r2,yc,L,0,COL.B,"F",{off:11,lw:2.6,head:9});
-        P.jtextW(s.x2+0.95,-0.44,"外力（手が押さえる力）",{size:10.5,col:COL.B,align:"center"});
+        const Fh=k*s.u, L=Math.abs(Fh)*4.0*(Fh>=0?1:-1);
+        P.vec(x2+r2,yc,L,0,COL.B,"F",{off:11,lw:2.6,head:9});
+        P.jtextW(x2+0.95,-0.44,"外力（手が押さえる力）",{size:10.5,col:COL.B,align:"center"});
       }
-      if(o.allForces){ mgArrow(P,s.x1+3/P.s,r1,m1,2.0,"mg"); mgArrow(P,s.x2+3/P.s,r2,m2,2.0,"2mg"); }
+      if(o.allForces){
+        mgArrow(P,x1+3/P.s,r1,m1,2.0,"mg");  NArrow(P,x1,0,m1*G,2.0,"N",-12);
+        mgArrow(P,x2+3/P.s,r2,m2,2.0,"2mg"); NArrow(P,x2,0,m2*G,2.0,"N",13);
+      }
     },
     readout(s,t){ return [{k:MV("v","1"),v:fmt(s.v1,2),u:"m/s"},{k:MV("v","2"),v:fmt(s.v2,2),u:"m/s"},
       {k:"運動量 "+MV("p")+" の和",v:fmt(m1*s.v1+m2*s.v2,2),u:"kg·m/s",wide:1},
@@ -1750,10 +1797,10 @@ function SC10(){
     events:[
       {t0:0.02,t1:tH,col:COL.B,bub:"外力！\n（右球を固定する力）",
        text:"右球を固定している間は、手（外力）が系に力積を与えるので<b>運動量の総和は増えていく</b>（グラフの黒線）。いっぽう固定された球は動かないので外力は仕事をせず、力学的エネルギーは一定のまま。",
-       at:(s)=>[(s.x1+s.x2)/2, r2*0.8+1.88]},
+       at:(s)=>[(s.x1+s.x2)/2-DX, r2*0.8+1.88]},
       {t0:tH,t1:tEnd,bubT1:tH+0.50,col:COL.C,bub:"固定を外した！",
        text:"ここから先は外力がない。運動量の総和は $mv_1+2mv_2$ に固定され、<b>重心は右向きに等速直線運動</b>する。ばねの弾性力は内力かつ保存力なので、力学的エネルギーも保存される。",
-       at:(s)=>[(s.x1+s.x2)/2, r2*0.8+1.88]}
+       at:(s)=>[(s.x1+s.x2)/2-DX, r2*0.8+1.88]}
     ]
   };
 }
@@ -1763,7 +1810,7 @@ function SC10(){
    ========================================================================= */
 
 const OPT = {
-  yes:"される", no:"されない", hx:"水平方向のみされる"
+  yes:"する", no:"しない", hx:"水平方向のみする"
 };
 
 const PROBS = [
@@ -1882,7 +1929,7 @@ function buildPage(){
 
   h+=`<div class="instr">
     <p class="lead">【問題】</p>
-    <p style="margin:.2em 0 .3em">次の問題では、次の 2 つの量は (a) (b) を比較してどうなるか。保存されるか、保存されないかで答えよ。</p>
+    <p style="margin:.2em 0 .3em">次の問題では、次の 2 つの量は (a) (b) を比較してどうなるか。保存するか、保存しないかで答えよ。</p>
     <p style="margin:.2em 0 0;padding-left:.6em">
       <b>①</b> 2 物体の運動量の総和　　　　<b>②</b> 2 物体の力学的エネルギーの総和</p>
   </div>
