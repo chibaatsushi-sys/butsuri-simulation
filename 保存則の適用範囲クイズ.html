@@ -13,7 +13,7 @@
   --vcol:#1663b5; --fcol:#111; --panel:#fbfcfd;
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -45,7 +45,7 @@ h2{font-size:1.12rem;margin:0 0 .5em}
 .instr li{margin:.15em 0}
 
 /* ---- question card ---- */
-.q{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:0 0 22px;overflow:hidden;
+.q{scroll-margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin:0 0 22px;overflow:hidden;
    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0}
 .q.high{border-color:#c9b7e6}
 .qL{padding:16px 16px 18px;border-right:1px solid var(--line);min-width:0;display:flex;flex-direction:column}
@@ -55,6 +55,24 @@ h2{font-size:1.12rem;margin:0 0 .5em}
   .qL{border-right:0;border-bottom:1px solid var(--line)}
 }
 .qnum{display:inline-block;background:var(--ink);color:#fff;border-radius:6px;padding:.05em .6em;font-weight:700;font-size:.95rem;margin-right:.5em}
+.qsub{font-size:.82rem;font-weight:600;color:#5b6672;letter-spacing:.01em}
+.qpt{margin-left:.6em;font-size:.78rem;font-weight:700;border-radius:999px;padding:.14em .7em;border:1px solid;font-variant-numeric:tabular-nums;vertical-align:middle}
+.qpt b{font-size:1.05rem;margin-right:.1em}
+.qpt.hidden{display:none}
+.qpt.p2{background:#eaf7ef;border-color:#7cc79b;color:#1c6b3d}
+.qpt.p1{background:#fff7ec;border-color:#e8c98a;color:#8a6100}
+.qpt.p0{background:#fdeeee;border-color:#e8a9a9;color:#a5342c}
+.q.done{border-width:2.5px}
+.q.done.d2{border-color:#5cb98a;box-shadow:0 0 0 3px rgba(92,185,138,.13)}
+.q.done.d1{border-color:#e0a23c;box-shadow:0 0 0 3px rgba(224,162,60,.13)}
+.q.done.d0{border-color:#d98b86;box-shadow:0 0 0 3px rgba(217,139,134,.13)}
+.q.done.d2 .qL{background:#f7fcf9}
+.q.done.d1 .qL{background:#fffcf6}
+.q.done.d0 .qL{background:#fefaf9}
+.q.done .foldhead{background:#e7f1ea;color:#1c6b3d}
+.q.done.d1 .foldhead{background:#faf1e2;color:#8a6100}
+.q.done.d0 .foldhead{background:#fbeceb;color:#a5342c}
+
 .qtag{font-size:.78rem;color:#7a5aa8;border:1px solid #c9b7e6;border-radius:999px;padding:.05em .6em}
 .stmt{margin:.6em 0 .2em}
 .stmt p{margin:.45em 0}
@@ -92,13 +110,19 @@ table.ans td{border:1px solid #b9c2cc;padding:.5em .5em;vertical-align:top}
 .cvwrap{position:relative;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #e0e6ec;border-radius:10px;background:#fff}
 .cvwrap canvas{display:block}
 .ctrls{margin:.6em 0 0}
-.row1{display:flex;flex-wrap:nowrap;gap:.35em;align-items:center}
+.row1{display:flex;flex-wrap:nowrap;gap:.35em;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 .row1 button{white-space:nowrap;flex:0 0 auto}
 .row2{display:flex;flex-wrap:wrap;gap:.7em 1.1em;align-items:center;margin-top:.55em}
 button.b{font:inherit;font-size:.88rem;padding:.34em .7em;border:1px solid #b9c2cc;background:#fff;border-radius:8px;cursor:pointer}
 button.b:hover{background:#f0f5fb}
 button.b.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
-button.b.play{min-width:6.6em;text-align:center}
+button.b.play{min-width:7.4em;text-align:center;font-size:.98rem;font-weight:700;padding:.42em .9em;
+  background:linear-gradient(#f5a03c,#e07b18);border-color:#c96a0d;color:#fff;
+  box-shadow:0 2px 0 #b45f09,0 2px 8px rgba(224,123,24,.35)}
+button.b.play:hover{background:linear-gradient(#f7ae55,#e88a2b)}
+button.b.play:active{transform:translateY(1px);box-shadow:0 1px 0 #b45f09}
+@media(max-width:520px){button.b.play{font-size:.9rem;min-width:6.8em;padding:.36em .7em}
+  .row1 button.b{font-size:.8rem;padding:.3em .55em}}
 button.b.sm{font-size:.83rem;border-color:#c9b7e6;color:#5b3d8c;background:#f7f2fd}
 button.b.sm:hover{background:#efe6fb}
 button.b.sm.on{background:#7a5aa8;border-color:#7a5aa8;color:#fff}
@@ -145,8 +169,38 @@ button.tiny.on{background:#eef2f6;color:#3d4753;border-color:#c3ccd6}
 .katex-display>.katex{white-space:normal}
 .sec{margin:34px 0 14px;font-weight:700;color:#7a5aa8;border-bottom:2px solid #c9b7e6;padding-bottom:.2em}
 footer{color:var(--sub);font-size:.85rem;text-align:center;margin-top:30px}
-.toc{font-size:.9rem}
-.toc a{display:inline-block;margin:.15em .35em .15em 0;padding:.1em .55em;border:1px solid var(--line);border-radius:6px;text-decoration:none;color:var(--accent2);background:#fff}
+.scorebox{background:#fff;border:2px solid var(--accent);border-radius:14px;padding:16px 18px;margin:26px 0 6px;box-shadow:0 2px 10px rgba(224,123,24,.10)}
+.scorebox.hidden{display:none}
+.scoretitle{font-weight:700;font-size:.95rem;color:var(--sub);margin-bottom:.5em}
+.scorenum{font-size:1.5rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.scorenum b{font-size:2.1rem;color:var(--accent);margin:0 .06em}
+.scorenum .sof{font-size:1rem;font-weight:600;color:var(--sub)}
+.scoremsg{margin-top:.5em;font-size:1.02rem;padding:.5em .8em;border-radius:8px}
+.scoremsg.gold{background:#fff5da;border:1px solid #e8c65a;color:#8a6100}
+.scoremsg.pass{background:#eaf7ef;border:1px solid #9bd6b2;color:#1c6b3d}
+.scoremsg.more{background:#f4f6f8;border:1px solid var(--line);color:#5b6672;font-size:.92rem}
+.scoremsg.near{background:#eef4fd;border:1px solid #a8c5ea;color:#1c4f8f}
+.scoretbl{margin-top:.7em;display:flex;flex-wrap:wrap;gap:6px}
+.scell{display:inline-flex;align-items:center;gap:.35em;font-size:.78rem;color:#5b6672;border:1px solid var(--line);border-radius:999px;padding:.18em .6em;background:#fbfcfd;font-variant-numeric:tabular-nums;text-decoration:none;transition:transform .08s}
+.scell:hover{transform:translateY(-1px);filter:brightness(.97);text-decoration:none}
+.scelllab{font-size:.8rem;color:#5b6672;align-self:center;margin-right:.2em}
+.scell b{font-size:.9rem}
+.scell.s2{background:#eaf7ef;border-color:#9bd6b2;color:#1c6b3d}
+.scell.s1{background:#fff7ec;border-color:#e8c98a;color:#8a6100}
+.scell.s0{background:#fdeeee;border-color:#e8a9a9;color:#a5342c}
+
+.zoomlay{position:fixed;inset:0;z-index:9999;pointer-events:none}
+.zoomlay.hidden{display:none}
+.zoomlay canvas{position:absolute;background:#fff;border:1.5px solid #b9c6d4;border-radius:12px;box-shadow:0 10px 34px rgba(20,30,45,.28)}
+.stagebox.zoomable{cursor:zoom-in}
+.zhint{margin-left:.7em;font-size:.72rem;font-weight:400;color:#9aa5b1}
+@media(hover:none){.zhint{font-size:0}.zhint::after{content:"🔍 タップで拡大";font-size:.72rem}}
+.tocbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 22px}
+.toclabel{font-weight:700;font-size:.95rem;color:var(--sub);margin-bottom:.4em}
+.tocnote{margin:.7em 0 0;padding:.45em .8em;background:#fff7ec;border-left:4px solid var(--accent);
+  border-radius:0 8px 8px 0;font-size:.92rem}
+.toc{font-size:.9rem;display:flex;flex-wrap:wrap;gap:.35em}
+.toc a{display:inline-block;margin:0;padding:.22em .7em;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--accent2);background:#fbfcfd;white-space:nowrap}
 .toc a:hover{background:#eef4fb}
 .hidden{display:none}
 </style>
@@ -304,36 +358,64 @@ class Painter{
     const toks=[]; let i=0;
     while(i<str.length){
       const ch=str[i];
+      if(ch==="@"){ i++; const q=str[i++]||""; toks.push({t:q,sub:false,vec:true}); continue; }
       if(ch==="_"){ i++; let sub="";
         if(str[i]==="{"){ i++; while(i<str.length&&str[i]!=="}"){sub+=str[i++];} i++; } else { sub=str[i++]||""; }
         for(const q of sub) toks.push({t:q,sub:true});
       } else { toks.push({t:ch,sub:false}); i++; }
     }
-    const runs=[]; let cur="",curIt=null,curSub=null;
+    const runs=[]; let cur="",curIt=null,curSub=null,curVec=null;
     const isIt=(ch)=>/[A-Za-z\u03b1-\u03c9\u0391-\u03a9]/.test(ch);
     toks.forEach(tk=>{
-      const it=isIt(tk.t);
-      if(curIt===null||(it===curIt&&tk.sub===curSub)){ cur+=tk.t; curIt=it; curSub=tk.sub; }
-      else { runs.push({t:cur,it:curIt,sub:curSub}); cur=tk.t; curIt=it; curSub=tk.sub; }
+      const it=isIt(tk.t), vc=!!tk.vec;
+      if(curIt===null||(it===curIt&&tk.sub===curSub&&!vc&&!curVec)){ cur+=tk.t; curIt=it; curSub=tk.sub; curVec=vc; }
+      else { if(cur!=="") runs.push({t:cur,it:curIt,sub:curSub,vec:curVec});
+             cur=tk.t; curIt=it; curSub=tk.sub; curVec=vc; }
     });
-    if(cur!=="") runs.push({t:cur,it:curIt,sub:curSub});
+    if(cur!=="") runs.push({t:cur,it:curIt,sub:curSub,vec:curVec});
     const fontOf=(r)=>{ const sz=(r.sub? size*0.72 : size);
       return r.it ? ('italic '+sz+'px KaTeX_Math, "Times New Roman", serif')
                   : (sz+'px KaTeX_Main, "Times New Roman", serif'); };
     let w=0; runs.forEach(r=>{ c.font=fontOf(r); r.w=c.measureText(r.t).width; w+=r.w; });
     let X=Xpx; if(o.align==="center") X-=w/2; else if(o.align==="right") X-=w;
-    runs.forEach(r=>{ c.font=fontOf(r); c.fillText(r.t, X, Ypx+(r.sub? size*0.28:0)); X+=r.w; });
+    runs.forEach(r=>{ c.font=fontOf(r); c.fillText(r.t, X, Ypx+(r.sub? size*0.28:0));
+      if(r.vec){                                   // ベクトル記号（上向き矢印）
+        const y=Ypx-size*0.64, x1=X+size*0.12, x2=X+r.w+size*0.18, hh=size*0.17;
+        c.save(); c.strokeStyle=c.fillStyle; c.lineWidth=Math.max(1, size*0.075); c.lineCap="round";
+        c.beginPath(); c.moveTo(x1,y); c.lineTo(x2,y); c.stroke();
+        c.beginPath(); c.moveTo(x2,y); c.lineTo(x2-hh,y-hh*0.75); c.lineTo(x2-hh,y+hh*0.75); c.closePath(); c.fill();
+        c.restore();
+      }
+      X+=r.w; });
     c.restore(); return w;
   }
   mtextW(x,y,str,o){ return this.mtext(this.X(x), this.Y(y), str, o); }
   /* 日本語ラベル */
   jtext(Xpx,Ypx,str,o){
-    o=o||{}; const c=this.c; c.save();
+    o=o||{}; if(o.cap && this.hideCap) return;
+    const c=this.c; c.save();
     c.font=(o.bold?"700 ":"")+(o.size||12)+'px "Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif';
     c.fillStyle=o.col||COL.grey; c.textBaseline="middle"; c.textAlign=o.align||"left";
     c.fillText(str,Xpx,Ypx); c.restore();
   }
   jtextW(x,y,str,o){ this.jtext(this.X(x),this.Y(y),str,o); }
+  /* 白地の小ラベル（線の上に重ねて置く） */
+  tagW(x,y,str,col,size){
+    const c=this.c, X=this.X(x), Y=this.Y(y), sz=size||11.5;
+    c.save();
+    c.font='700 '+sz+'px "Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif';
+    const w=c.measureText(str).width, hh=sz*0.72;
+    c.fillStyle="#ffffff"; c.strokeStyle=col; c.lineWidth=1;
+    const rx=X-w/2-3.5, ry=Y-hh-2, rw=w+7, rh=hh*2+4, rr=3;
+    c.beginPath();
+    c.moveTo(rx+rr,ry); c.lineTo(rx+rw-rr,ry); c.quadraticCurveTo(rx+rw,ry,rx+rw,ry+rr);
+    c.lineTo(rx+rw,ry+rh-rr); c.quadraticCurveTo(rx+rw,ry+rh,rx+rw-rr,ry+rh);
+    c.lineTo(rx+rr,ry+rh); c.quadraticCurveTo(rx,ry+rh,rx,ry+rh-rr);
+    c.lineTo(rx,ry+rr); c.quadraticCurveTo(rx,ry,rx+rr,ry); c.closePath();
+    c.fill(); c.stroke();
+    c.fillStyle=col; c.textBaseline="middle"; c.textAlign="center";
+    c.fillText(str,X,Y); c.restore();
+  }
   /* 寸法線 */
   dim(x1,y1,x2,y2,label,col){
     const c=this.c, C=col||COL.faint;
@@ -439,25 +521,110 @@ function drawStages(ctx, W, rows){
   });
 }
 
+
+/* =========================================================================
+   図の拡大表示（マウスを重ねる／タップで大きく表示）
+   ========================================================================= */
+let ZOV=null, ZCV=null, ZCX=null;
+function zoomInit(){
+  if(ZOV) return;
+  ZOV=document.createElement("div"); ZOV.className="zoomlay hidden";
+  ZCV=document.createElement("canvas"); ZOV.appendChild(ZCV); ZCX=ZCV.getContext("2d");
+  document.body.appendChild(ZOV);
+  document.addEventListener("click",()=>zoomHide());
+  window.addEventListener("resize",()=>zoomHide());
+}
+function zoomShow(el){
+  const z=el._z; if(!z||!z.w||!z.h) return;
+  zoomInit();
+  const maxW=Math.min(window.innerWidth-20, 1180), maxH=window.innerHeight-20;
+  const k=Math.min(maxW/z.w, maxH/z.h, 1.85);
+  if(k<1.12){ return; }
+  const W=z.w*k, H=z.h*k, dpr=Math.min(2, window.devicePixelRatio||1);
+  ZCV.style.width=W+"px"; ZCV.style.height=H+"px";
+  ZCV.width=Math.round(W*dpr); ZCV.height=Math.round(H*dpr);
+  ZCX.setTransform(dpr*k,0,0,dpr*k,0,0);
+  ZCX.clearRect(0,0,z.w,z.h);
+  z.draw(ZCX);
+  const r=el.getBoundingClientRect();
+  const cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  ZCV.style.left=cl(r.left+r.width/2-W/2, 8, Math.max(8,window.innerWidth-W-8))+"px";
+  ZCV.style.top =cl(r.top +r.height/2-H/2, 8, Math.max(8,window.innerHeight-H-8))+"px";
+  ZOV.classList.remove("hidden");
+}
+function zoomHide(){ if(ZOV) ZOV.classList.add("hidden"); }
+function regZoom(el){
+  if(!el || el._zreg) return; el._zreg=1;
+  el.classList.add("zoomable");
+  const t=el.querySelector(".stagetitle");
+  if(t && !t.querySelector(".zhint")){
+    const s=document.createElement("span"); s.className="zhint"; s.textContent="🔍 マウスを重ねると拡大";
+    t.appendChild(s);
+  }
+  el.addEventListener("mouseenter",()=>zoomShow(el));
+  el.addEventListener("mouseleave",()=>zoomHide());
+  el.addEventListener("click",(e)=>{ e.stopPropagation(); zoomShow(el); });
+}
+
+/* =========================================================================
+   運動量ベクトルの和（衝突前 → 衝突後）の図
+   ========================================================================= */
+function drawMomSum(ctx, W, cfg){
+  const H=cfg.H;
+  ctx.clearRect(0,0,W,H);
+  const P=new Painter(ctx); P.k=1; P.setView(1,0,0);
+  const gap=26, pw=(W-gap)/2, SC=cfg.sc||40;
+  const panels=[{ttl:cfg.t1, vs:cfg.before, sum:cfg.sum1, sumT:cfg.sumT1, sumOff:cfg.sumOff1, x0:0},
+                {ttl:cfg.t2, vs:cfg.after,  sum:cfg.sum2, sumT:cfg.sumT2, sumOff:cfg.sumOff2, x0:pw+gap}];
+  panels.forEach(pn=>{
+    let x=0,y=0,minx=0,maxx=0,miny=0,maxy=0;
+    pn.vs.forEach(v=>{ x+=v.p[0]*SC; y+=-v.p[1]*SC;
+      minx=Math.min(minx,x); maxx=Math.max(maxx,x); miny=Math.min(miny,y); maxy=Math.max(maxy,y); });
+    const bw=maxx-minx, bh=maxy-miny;
+    const ox=pn.x0+(pw-bw)/2-minx;
+    const oy=32+(H-70-bh)/2-miny;
+    P.jtext(pn.x0+pw/2, 15, pn.ttl, {size:12.5, align:"center", col:"#31465e", bold:true});
+    let ex=ox, ey=oy;
+    pn.vs.forEach(v=>{ ex+=v.p[0]*SC; ey+=-v.p[1]*SC; });
+    let cx=ox, cy=oy;
+    pn.vs.forEach(v=>{
+      const dx=v.p[0]*SC, dy=-v.p[1]*SC, L=Math.hypot(dx,dy);
+      P.arrowRaw(cx,cy,dx,dy,v.col,2.6,11);
+      const nx=-dy/L, ny=dx/L, sg=(v.side||1);
+      P.mtext(cx+dx/2+nx*14*sg, cy+dy/2+ny*14*sg, v.lab, {col:v.col, size:13, align:"center"});
+      cx+=dx; cy+=dy;
+    });
+    P.arrowRaw(ox,oy,ex-ox,ey-oy,"#1b1f24",3.6,13);
+    { const dx=ex-ox, dy=ey-oy, L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;
+      const tt=(pn.sumT===undefined?0.5:pn.sumT), of=(pn.sumOff===undefined?-17:pn.sumOff);
+      P.mtext(ox+dx*tt+nx*of, oy+dy*tt+ny*of, pn.sum, {col:"#1b1f24", size:14, align:"center"}); }
+    ctx.save(); ctx.fillStyle="#1b1f24"; ctx.beginPath(); ctx.arc(ox,oy,2.8,0,7); ctx.fill(); ctx.restore();
+  });
+  ctx.save(); ctx.strokeStyle="#dde3e9"; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pw+gap/2, 28); ctx.lineTo(pw+gap/2, H-28); ctx.stroke(); ctx.restore();
+  P.jtext(W/2, H-12, cfg.note||"運動量の和は変わらない", {size:12.5, align:"center", col:"#c2700f", bold:true});
+}
+
 /* =========================================================================
    (a)(b) 比較図：シーンの draw() を使って複数の瞬間を横に並べて描く
    ========================================================================= */
-function snapsLayout(sc, W){
+function snapsLayout(sc, W, hcap){
   const n=sc.snaps.length, pw=W/n;
   const wW=sc.world.x1-sc.world.x0, wH=sc.world.y1-sc.world.y0;
-  const s=Math.min((pw-14)/wW, (sc.snapH||160)/wH);
+  const s=Math.min((pw-14)/wW, (hcap||sc.snapH||160)/wH);
   return {n,pw,s,wW,wH,H:22+wH*s};
 }
-function drawSnaps(ctx, W, sc){
-  const L=snapsLayout(sc,W);
+function drawSnaps(ctx, W, sc, hcap){
+  const L=snapsLayout(sc,W,hcap);
   ctx.clearRect(0,0,W,L.H);
   const P=new Painter(ctx);
   P.k = (L.n>=3? 0.60 : 0.78);
+  P.hideCap = true;                       // 3 コマ図では状況説明を出さない
   sc.snaps.forEach((sn,i)=>{
     const px=i*L.pw;
     ctx.save(); ctx.beginPath(); ctx.rect(px,0,L.pw,L.H); ctx.clip();
     P.setView(L.s, px+(L.pw-L.wW*L.s)/2 - sc.world.x0*L.s, 22+sc.world.y1*L.s);
-    sc.draw(P, sc.st(sn.t), sn.t, {labels:true, allForces:!!sn.forces, forces:!!sn.forces,
+    sc.draw(P, sc.st(sn.t), sn.t, {labels:(i===0), allForces:!!sn.forces, forces:!!sn.forces,
                                    inter:true, obs:false, started:true, snap:true, t:sn.t});
     ctx.restore();
     P.jtext(px+L.pw/2, 12, sn.label, {size:12, align:"center", col:"#31465e", bold:true});
@@ -550,7 +717,7 @@ class Sim{
     const sc=this.sc, h=this.host;
     h.innerHTML = "";
     const head=document.createElement("div"); head.className="simhead";
-    head.innerHTML = "▼ 答えのアニメーション";
+    head.innerHTML = "▼ 運動の様子をアニメで見てみよう";
     h.appendChild(head);
 
     this.wrap=document.createElement("div"); this.wrap.className="cvwrap";
@@ -585,6 +752,7 @@ class Sim{
       const sw=document.createElement("div"); sw.className="stagebox"; shost.appendChild(sw);
       const st=document.createElement("div"); st.className="stagetitle"; st.textContent="■ 衝突前・衝突中・衝突後";
       sw.appendChild(st);
+      this.stbox=sw;
       this.stsc=document.createElement("div"); this.stsc.className="stagescroll"; sw.appendChild(this.stsc);
       this.stcv=document.createElement("canvas"); this.stsc.appendChild(this.stcv);
       this.stctx=this.stcv.getContext("2d");
@@ -599,6 +767,19 @@ class Sim{
       this.snsc=document.createElement("div"); this.snsc.className="stagescroll"; nw.appendChild(this.snsc);
       this.sncv=document.createElement("canvas"); this.snsc.appendChild(this.sncv);
       this.snctx=this.sncv.getContext("2d");
+      this.snbox=nw;
+    }
+
+    if(sc.momFig){
+      const mhost=this.opts.stageHost||h;
+      if(this.opts.stageHost) mhost.classList.remove("hidden");
+      const mw=document.createElement("div"); mw.className="stagebox"; mhost.appendChild(mw);
+      const mt=document.createElement("div"); mt.className="stagetitle"; mt.textContent=sc.momFig.title;
+      mw.appendChild(mt);
+      this.mmsc=document.createElement("div"); this.mmsc.className="stagescroll"; mw.appendChild(this.mmsc);
+      this.mmcv=document.createElement("canvas"); this.mmsc.appendChild(this.mmcv);
+      this.mmctx=this.mmcv.getContext("2d");
+      this.mmbox=mw;
     }
 
     const gw=document.createElement("div"); gw.className="graphs"; h.appendChild(gw);
@@ -612,7 +793,7 @@ class Sim{
     this.gcv=document.createElement("canvas"); gw.appendChild(this.gcv);
     this.gctx=this.gcv.getContext("2d");
     const cap=document.createElement("div"); cap.className="gcap";
-    cap.innerHTML="グラフ（アニメと連動・オレンジの縦線が現在時刻）：左＝運動量（または速度）の <i style=\"font-family:KaTeX_Math,serif\">x</i> 成分、右＝エネルギー。<br><span style=\"font-size:.92em\">エネルギーの<b>合計</b>は「2 物体の力学的エネルギーの総和（ばねの弾性エネルギーを含む）」です。"+(sc.totalOffset===false?"":"線が重なって見えなくなるのを防ぐため、合計（太い黒線）は上に少しずらしています。")+"</span>";
+    cap.innerHTML="グラフ（アニメと連動・オレンジの縦線が現在時刻）：左＝運動量（または速度）の <i style=\"font-family:KaTeX_Math,serif\">x</i> 成分、右＝エネルギー。<br><span style=\"font-size:.92em\">エネルギーの<b>合計</b>は「2 物体の力学的エネルギーの総和"+(sc.springE?"（ばねの弾性エネルギーを含む）":"")+"」です。"+(sc.totalOffset===false?"":"線が重なって見えなくなるのを防ぐため、合計（太い黒線）は上に少しずらしています。")+"</span>";
     gw.appendChild(cap);
 
     this.ro=document.createElement("div"); this.ro.className="readout"; h.appendChild(this.ro);
@@ -683,6 +864,8 @@ class Sim{
       this.stctx.setTransform(dpr,0,0,dpr,0,0);
       this.stW=sW;
       drawStages(this.stctx, sW, this.sc.stages);
+      const rows=this.sc.stages;
+      this.stbox._z={w:sW,h:sH,draw:(c)=>drawStages(c,sW,rows)}; regZoom(this.stbox);
     }
     if(this.sncv){
       const nW=Math.max(this.sc.snaps.length>=3?560:520,(this.snsc.clientWidth||this.host.clientWidth||600));
@@ -691,6 +874,17 @@ class Sim{
       this.sncv.width=Math.round(nW*dpr); this.sncv.height=Math.round(L.H*dpr);
       this.snctx.setTransform(dpr,0,0,dpr,0,0);
       drawSnaps(this.snctx, nW, this.sc);
+      const sc=this.sc;
+      this.snbox._z={w:nW,h:L.H,draw:(c)=>drawSnaps(c,nW,sc)}; regZoom(this.snbox);
+    }
+    if(this.mmcv){
+      const cfg=this.sc.momFig;
+      const mW=Math.max(540,(this.mmsc.clientWidth||this.host.clientWidth||600)), mH=cfg.H;
+      this.mmcv.style.width=mW+"px"; this.mmcv.style.height=mH+"px";
+      this.mmcv.width=Math.round(mW*dpr); this.mmcv.height=Math.round(mH*dpr);
+      this.mmctx.setTransform(dpr,0,0,dpr,0,0);
+      drawMomSum(this.mmctx, mW, cfg);
+      this.mmbox._z={w:mW,h:mH,draw:(c)=>drawMomSum(c,mW,cfg)}; regZoom(this.mmbox);
     }
   }
 
@@ -916,7 +1110,7 @@ function SC1(){
     preBubbles(s){ return [{x:s.xB,y:1.92,text:"静止 v=0",col:COL.B}]; },
     draw(P,s,t,o){
       P.ground(0,2.35,7.65);
-      P.jtextW(2.45,2.68,"なめらかな水平面（摩擦なし）",{size:11,col:"#aab3bd"});
+      P.jtextW(2.45,2.68,"なめらかな水平面（摩擦なし）",{size:11,col:"#aab3bd",cap:1});
       P.vec(2.55,2.34,34,0,"#c3ccd6","x",{off:10,lw:1.2,size:12});
       [["A",s.xA,s.vA,COL.A],["B",s.xB,s.vB,COL.B]].forEach(([nm,x,v,col])=>{
         P.ball(x,r,r,"#fff",COL.ink,2.2);
@@ -983,7 +1177,7 @@ function SC2(){
     preBubbles(s){ return [{x:s.xB,y:1.92,text:"静止 v=0",col:COL.B}]; },
     draw(P,s,t,o){
       P.ground(0,2.35,7.65);
-      P.jtextW(2.45,2.68,"なめらかな水平面（摩擦なし）",{size:11,col:"#aab3bd"});
+      P.jtextW(2.45,2.68,"なめらかな水平面（摩擦なし）",{size:11,col:"#aab3bd",cap:1});
       P.vec(2.55,2.34,34,0,"#c3ccd6","x",{off:10,lw:1.2,size:12});
       [["A",s.xA,s.vA,COL.A],["B",s.xB,s.vB,COL.B]].forEach(([nm,x,v,col])=>{
         P.ball(x,r,r,"#fff",COL.ink,2.2);
@@ -1032,7 +1226,7 @@ function SC3(){
     follow(s){ return s.XM+bw/2; },
     draw(P,s,t,o){
       P.ground(0,0.15,5.05);
-      P.jtextW(0.25,2.45,"板と床の間の摩擦は無視（なめらか）",{size:11,col:"#aab3bd"});
+      P.jtextW(0.25,2.45,"板と床の間の摩擦は無視（なめらか）",{size:11,col:"#aab3bd",cap:1});
       P.vec(0.3,2.05,32,0,"#c3ccd6","x",{off:9,lw:1.2,size:12});
       P.rectW(s.XM,0,bw,bh,"#fff",COL.ink,2.2,2);
       P.rectW(s.xm-mw/2,bh,mw,mh,"#fff",COL.ink,2.2,2);
@@ -1097,11 +1291,12 @@ function SC4(){
     follow(s){ return (s.xA+s.xB)/2; },
     draw(P,s,t,o){
       P.ground(0,1.7,8.0);
-      P.jtextW(1.85,2.35,"なめらかで水平な床",{size:11,col:"#aab3bd"});
+      P.jtextW(1.85,2.35,"なめらかで水平な床",{size:11,col:"#aab3bd",cap:1});
       const sx=s.xA+w/2, ex=s.xB-w/2, sEnd=(s.contact?ex:sx+L0);
       P.spring(sx,h*0.55,sEnd,h*0.55,7,6,"#0f7a5a",2);
       P.rectW(s.xA-w/2,0,w,h,"#fff",COL.ink,2.2,2);
       P.rectW(s.xB-w/2,0,w,h,"#fff",COL.ink,2.2,2);
+      if(!o.started) P.jtextW(sEnd+0.10,h*0.55,"ばね",{size:11.5,col:"#0f7a5a",bold:true});
       if(o.labels){ P.mtextW(s.xA,h+0.55,"A:m",{size:15,align:"center",col:COL.A});
         P.mtextW(s.xB,h+0.55,"B:m",{size:15,align:"center",col:COL.B}); }
       vArrow(P,s.xA,h+0.20,s.vA,26,t<t1?"2v":"v",COL.v);
@@ -1163,10 +1358,11 @@ function SC5(){
     preBubbles(s){ return [{x:s.xB+0.80,y:yB+0.80,text:"静止 v=0",col:COL.B}]; },
     draw(P,s,t,o){
       P.ground(0,1.15,7.85);
-      P.jtextW(1.3,2.82,"なめらかで水平な床",{size:11,col:"#aab3bd"});
+      P.jtextW(1.3,2.82,"なめらかで水平な床",{size:11,col:"#aab3bd",cap:1});
       const xL=s.xA-wA/2, xR=s.xA+wA/2, xn=xR-nd;      // コの字（右側にくぼみ）
       P.poly([[xL,0],[xR,0],[xR,ny0],[xn,ny0],[xn,ny1],[xR,ny1],[xR,hA],[xL,hA]],"#f2f2f2",COL.ink,2.2);
       if(!s.fly) P.spring(xn+0.02,yB,s.xB-r,yB,4,4.0,"#0f7a5a",1.8);
+      if(!s.fly && !o.started) P.jtextW((xn+0.02+s.xB-r)/2,ny0-0.22,"ばね",{size:11.5,col:"#0f7a5a",align:"center",bold:true});
       P.ball(s.xB,yB,r,"#fff",COL.ink,2.2);
       if(o.labels){ P.mtextW(s.xA-0.55,hA+0.62,"A:M",{size:15,align:"center",col:COL.A});
         P.mtextW(s.xB+0.80,yB+0.55,"B:m",{size:15,align:"center",col:COL.B}); }
@@ -1217,10 +1413,18 @@ function SC6(){
   const E0=.5*m1*(v1[0]**2+v1[1]**2)+.5*m2*(v2[0]**2+v2[1]**2);
   const tEnd=1.65;
   return {
-    id:"q6", world:{x0:2.3,x1:7.2,y0:0.55,y1:4.5}, minPxPerM:66, maxH:300, tEnd,
+    id:"q6", world:{x0:2.3,x1:7.2,y0:0.55,y1:5.05}, minPxPerM:66, maxH:320, tEnd,
     assume:'数値は $m=1.0$ kg、$M=2.0$ kg、弾性衝突（$e=1$）として計算。図は水平面を真上から見たもの。',
     slowmo:{t0:Math.max(0,t1-0.05), t1:t1+DT+0.10, k:0.10},
     snaps:[{label:"(a) 衝突前",t:0.35},{label:"衝突中",t:t1+DT*0.5,forces:false},{label:"(b) 衝突後",t:1.35}],
+    momFig:{ title:"■ 運動量ベクトルの和（衝突前 → 衝突後）", H:206, sc:40,
+      t1:"衝突前の運動量", t2:"衝突後の運動量",
+      note:"運動量の和（大きさも向きも）は変わらない",
+      sum1:"m@v+M@V", sum2:"m@v'+M@V'", sumT1:0.5, sumOff1:-20, sumT2:0.82, sumOff2:-31,
+      before:[{p:[m1*v1[0],m1*v1[1]],col:COL.A,lab:"m@v",side:-1},
+              {p:[m2*v2[0],m2*v2[1]],col:COL.B,lab:"M@V",side:1}],
+      after :[{p:[m1*v1p[0],m1*v1p[1]],col:COL.A,lab:"m@v'",side:-1},
+              {p:[m2*v2p[0],m2*v2p[1]],col:COL.B,lab:"M@V'",side:1}] },
     st(t){ let p1,p2,u1,u2,contact=false;
       if(t<t1){ p1=[S1[0]+v1[0]*t,S1[1]+v1[1]*t]; p2=[S2[0]+v2[0]*t,S2[1]+v2[1]*t]; u1=v1; u2=v2; }
       else if(t<t1+DT){ const tau=t-t1,u=tau/DT; contact=true;
@@ -1236,7 +1440,7 @@ function SC6(){
       for(let x=3;x<7.2;x+=1){ P.c.beginPath(); P.c.moveTo(P.X(x),P.Y(0.65)); P.c.lineTo(P.X(x),P.Y(4.1)); P.c.stroke(); }
       for(let y=1;y<4.1;y+=1){ P.c.beginPath(); P.c.moveTo(P.X(2.4),P.Y(y)); P.c.lineTo(P.X(7.1),P.Y(y)); P.c.stroke(); }
       P.c.restore();
-      P.jtextW(2.4,4.35,"上から見た図（なめらかな水平面）",{size:11,col:"#aab3bd"});
+      P.jtextW(2.4,4.30,"上から見た図（なめらかな水平面）",{size:11,col:"#aab3bd",cap:1});
       P.vec(2.5,0.95,30,0,"#c3ccd6","x",{off:9,lw:1.2,size:12});
       P.vec(2.5,0.95,0,-30,"#c3ccd6","y",{off:9,lw:1.2,size:12});
       P.ball(s.p1[0],s.p1[1],r1,"#fff",COL.ink,2.2);
@@ -1250,6 +1454,11 @@ function SC6(){
         P.vec(cx,cy,-n[0]*46, n[1]*46,COL.inner,"F",{off:11,lw:2.8,head:9});
         P.vec(cx,cy, n[0]*46,-n[1]*46,COL.inner,"F",{off:11,lw:2.8,head:9});
         P.c.save(); P.c.beginPath(); P.c.arc(P.X(cx),P.Y(cy),4.5,0,7); P.c.fillStyle=COL.inner; P.c.fill(); P.c.restore();
+      }
+      if(!o.figure){                    // 運動量ベクトルの和（衝突前・中・後でつねに同じ）
+        const Px=m1*s.u1[0]+m2*s.u2[0], Py=m1*s.u1[1]+m2*s.u2[1], K=26;
+        P.jtextW(2.44,4.97,"運動量の和（つねに同じ）",{size:10.5,col:"#1b1f24",bold:true});
+        P.arrowPx(2.46,4.60,Px*K,-Py*K,"#1b1f24",3.2,12);
       }
     },
     readout(s,t){ const px=m1*s.u1[0]+m2*s.u2[0], py=m1*s.u1[1]+m2*s.u2[1];
@@ -1296,7 +1505,7 @@ function SC7(){
     preBubbles(s){ return [{x:s.bx+0.35,y:s.by+0.62,text:"静止 v=0",col:COL.A}]; },
     draw(P,s,t,o){
       P.ground(0,1.30,6.35);
-      P.jtextW(1.40,2.66,"床も斜面もなめらか",{size:11,col:"#aab3bd"});
+      P.jtextW(1.40,2.66,"床も斜面もなめらか",{size:11,col:"#aab3bd",cap:1});
       P.poly([[s.Xw,0],[s.Xw,h],[s.Xw+base,0]],"#f4f7fa",COL.ink,2.2);
       if(o.labels){ P.mtextW(s.Xw+base*0.45,h*0.28,"M",{size:15,col:COL.B,align:"center"});
         P.mtextW(s.bx-0.40,s.by+0.40,"m",{size:15,align:"center",col:COL.A}); }
@@ -1304,7 +1513,7 @@ function SC7(){
       const c=P.c; c.save(); c.translate(P.X(s.bx),P.Y(s.by)); c.rotate(th);
       c.beginPath(); c.rect(-P.L(bs)/2,-P.L(bs),P.L(bs),P.L(bs));
       c.fillStyle="#fff"; c.fill(); c.strokeStyle=COL.ink; c.lineWidth=2.2; c.stroke(); c.restore();
-      const cxB=s.bx+0.62*Math.cos(th)+0.10*Math.sin(th), cyB=s.by-0.62*Math.sin(th)+0.10*Math.cos(th);
+      const cxB=s.bx+0.30*Math.cos(th)+0.36*Math.sin(th), cyB=s.by-0.30*Math.sin(th)+0.36*Math.cos(th);
       const VS=16, vdx=s.vbx*VS, vdy=-s.vby*VS;
       if(Math.hypot(vdx,vdy)>6) P.vec(cxB,cyB,vdx,vdy,COL.v,"v",{off:12,lw:2.6,head:13});
       vArrow(P,s.Xw+base*0.62,0.16,s.Vw,22,"V",COL.v);
@@ -1312,13 +1521,13 @@ function SC7(){
         const SC=6.0, Nx=nx*Nf*SC, Ny=-ny*Nf*SC;
         decomp(P,s.bx,s.by, Nx, Ny,"#f9a3d3","N_x","N_y",11.5);
         decomp(P,s.bx,s.by,-Nx,-Ny,"#f9a3d3","N_x","N_y",11.5);
-        P.vec(s.bx,s.by, Nx, Ny,COL.inner,"N",{off:13,lw:3.0,head:14});
+        P.vec(s.bx,s.by, Nx, Ny,COL.inner,"N",{off:15,lw:3.0,head:14,lx:-9,ly:-5});
         P.vec(s.bx,s.by,-Nx,-Ny,COL.inner,"N'",{off:13,lw:3.0,head:14});
         c.save(); c.beginPath(); c.arc(P.X(s.bx),P.Y(s.by),5,0,7); c.fillStyle=COL.inner; c.fill(); c.restore();
         // 水平成分だけを取り出して比べる（地面の下の余白に）
         const xc=s.Xw+base*0.52, yy=-0.55;
-        c.save(); c.strokeStyle="#f9a3d3"; c.setLineDash([3,3]); c.lineWidth=1;
-        c.beginPath(); c.moveTo(P.X(s.bx),P.Y(s.by)); c.lineTo(P.X(xc),P.Y(yy)); c.stroke(); c.restore();
+        if(!o.snap){ c.save(); c.strokeStyle="#f9a3d3"; c.setLineDash([3,3]); c.lineWidth=1;
+          c.beginPath(); c.moveTo(P.X(s.bx),P.Y(s.by)); c.lineTo(P.X(xc),P.Y(yy)); c.stroke(); c.restore(); }
         P.vec(xc,yy, Nx,0,COL.inner,"N_x",{off:12,lw:2.6,head:13,size:13});
         P.vec(xc,yy,-Nx,0,COL.inner,"N_x",{off:12,lw:2.6,head:13,size:13});
         c.save(); c.beginPath(); c.arc(P.X(xc),P.Y(yy),4,0,7); c.fillStyle=COL.inner; c.fill(); c.restore();
@@ -1366,7 +1575,7 @@ function SC8(){
     preBubbles(s){ return [{x:s.bx+0.35,y:s.by+0.62,text:"静止 v=0",col:COL.A}]; },
     draw(P,s,t,o){
       P.ground(0,1.30,5.80);
-      P.jtextW(1.40,2.66,"斜面はなめらか。台はストッパーで固定",{size:11,col:"#aab3bd"});
+      P.jtextW(1.40,2.66,"斜面はなめらか。台はストッパーで固定",{size:11,col:"#aab3bd",cap:1});
       P.poly([[Xw,0],[Xw,h],[Xw+base,0]],"#f4f7fa",COL.ink,2.2);
       P.rectW(Xw-0.18,0,0.18,0.34,"#222","#222",1.5,1);
       P.rectW(Xw+base,0,0.18,0.34,"#222","#222",1.5,1);
@@ -1376,14 +1585,14 @@ function SC8(){
       const c=P.c; c.save(); c.translate(P.X(s.bx),P.Y(s.by)); c.rotate(th);
       c.beginPath(); c.rect(-P.L(bs)/2,-P.L(bs),P.L(bs),P.L(bs));
       c.fillStyle="#fff"; c.fill(); c.strokeStyle=COL.ink; c.lineWidth=2.2; c.stroke(); c.restore();
-      { const cb=s.bx+0.62*Math.cos(th)+0.10*Math.sin(th), cy2=s.by-0.62*Math.sin(th)+0.10*Math.cos(th), VS=16;
+      { const cb=s.bx+0.30*Math.cos(th)+0.36*Math.sin(th), cy2=s.by-0.30*Math.sin(th)+0.36*Math.cos(th), VS=16;
         const vdx=s.vbx*VS, vdy=-s.vby*VS;
         if(Math.hypot(vdx,vdy)>6) P.vec(cb,cy2,vdx,vdy,COL.v,"v",{off:12,lw:2.6,head:13}); }
       if(o.inner!==false){
         const SC=6.0, Nx=nx*Nf*SC, Ny=-ny*Nf*SC;
         decomp(P,s.bx,s.by, Nx, Ny,"#f9a3d3","N_x","N_y",11.5);
         decomp(P,s.bx,s.by,-Nx,-Ny,"#f9a3d3","N_x","N_y",11.5);
-        P.vec(s.bx,s.by, Nx, Ny,COL.inner,"N",{off:13,lw:3.0,head:14});
+        P.vec(s.bx,s.by, Nx, Ny,COL.inner,"N",{off:15,lw:3.0,head:14,lx:-9,ly:-5});
         P.vec(s.bx,s.by,-Nx,-Ny,COL.inner,"N'",{off:13,lw:3.0,head:14});
         c.save(); c.beginPath(); c.arc(P.X(s.bx),P.Y(s.by),5,0,7); c.fillStyle=COL.inner; c.fill(); c.restore();
         P.vec(Xw-0.09,0.17,48,0,COL.B,"F",{off:12,lw:2.8,head:13});
@@ -1428,15 +1637,16 @@ function SC9(){
     preBubbles(s){ return [{x:s.x1,y:r+1.80,text:"静止 v=0",col:COL.A},{x:s.x2,y:r+1.80,text:"静止 v=0",col:COL.B}]; },
     draw(P,s,t,o){
       const yF=r+0.20, yCap=r+0.50, yLab=r+0.92, yV=r+1.30;
-      P.rectW(1.0,-0.95,4.0,0.95,"#d98b3a","#a2601f",2,3);
-      P.jtextW(1.25,-0.50,"なめらかな台",{size:11.5,col:"#fff5e8"});
+      P.ground(0,0.72,5.28);
+      P.jtextW(0.74,-0.84,"なめらかで水平な床",{size:11,col:"#aab3bd",cap:1});
       if(!o.figure){
         P.c.save(); P.c.strokeStyle="#e6b0b0"; P.c.setLineDash([3,3]); P.c.lineWidth=1;
         P.c.beginPath(); P.c.moveTo(P.X(Xc),P.Y(r)); P.c.lineTo(P.X(Xc),P.Y(-1.05)); P.c.stroke(); P.c.restore();
         P.jtextW(Xc,-1.16,"重心（動かない）",{size:10.5,col:"#c0392b",align:"center"});
       }
       P.spring(s.x1,r,s.x2,r,7,6,"#0f7a5a",2);
-      P.ball(s.x1,r,r,"#ffe14d",COL.ink,2.2); P.ball(s.x2,r,r,"#ffe14d",COL.ink,2.2);
+      if(!o.started) P.jtextW((s.x1+s.x2)/2-0.55,-0.40,"ばね",{size:11.5,col:"#0f7a5a",align:"center",bold:true});
+      P.ball(s.x1,r,r,"#fff",COL.ink,2.2); P.ball(s.x2,r,r,"#fff",COL.ink,2.2);
       if(!o.figure) P.ball(Xc,r,0.07,"#e02020","#a01010",1.2);
       if(o.labels){ P.mtextW(s.x1,yLab,"m",{size:15,align:"center",col:COL.A});
         P.mtextW(s.x2,yLab,"m",{size:15,align:"center",col:COL.B}); }
@@ -1473,18 +1683,18 @@ function SC9(){
    問10 : ばねでつながれた質量の異なる2物体（右を固定してから外す）
    ======================================================================= */
 function SC10(){
-  const m1=1,m2=3,k=20,L0=1.3,A1=0.5;
+  const m1=1,m2=2,k=20,L0=1.3,A1=0.5;
   const om1=Math.sqrt(k/m1);              // 右を固定している間の左球の角振動数
   const tH=Math.PI/(2*om1);               // 自然長・速さ最大の瞬間に固定を外す
   const v1H=A1*om1, Vcm=m1*v1H/(m1+m2);
   const mu=m1*m2/(m1+m2), om2=Math.sqrt(k/mu), amp2=v1H/om2;
   const x2f=3.85, XcmH=(m1*(x2f-L0)+m2*x2f)/(m1+m2);
-  const r1=0.22,r2=0.34, tB=tH+Math.PI/(2*om2), tEnd=tH+2.30;
+  const r1=0.22,r2=0.30, tB=tH+Math.PI/(2*om2), tEnd=tH+3.30;
   const E0=0.5*k*A1*A1;
   return {
     totalOffset:false, showVG:true, id:"q10", world:{x0:1.35,x1:6.55,y0:-1.45,y1:2.85}, minPxPerM:64, maxH:275, tEnd, springE:true,
     slowmo:{label:'固定を外す瞬間', t0:Math.max(0,tH-0.05), t1:tH+0.28, k:0.10},
-    assume:'数値は $m=1.0$ kg（左）、$3m=3.0$ kg（右）、$k=20$ N/m、自然長 1.3 m、左球を 0.5 m 引いた状態から出発。右球の固定は $t=0.35$ s で外す。',
+    assume:'数値は $m=1.0$ kg（左）、$2m=2.0$ kg（右）、$k=20$ N/m、自然長 1.3 m、左球を 0.5 m 引いた状態から出発。右球の固定は $t=0.35$ s で外す。',
     snaps:[{label:"(a) 手を放した直後",t:tH+0.004},
            {label:"ばねが縮んでいる途中",t:tH+(tB-tH)*0.5},
            {label:"(b) ばねが最も縮んだとき",t:tB}],
@@ -1500,20 +1710,21 @@ function SC10(){
                            {x:s.x2+0.55,y:r2*0.8+1.86,text:"手で押さえている",col:COL.B}]; },
     draw(P,s,t,o){
       const yc=r2*0.8, yF=yc+0.24, yCap=yc+0.54, yLab=yc+0.98, yV=yc+1.36;
-      P.rectW(1.6,-0.95,4.7,0.95,"#d98b3a","#a2601f",2,3);
-      P.jtextW(1.85,-0.50,"なめらかな台",{size:11.5,col:"#fff5e8"});
+      P.ground(0,1.38,6.52);
+      P.jtextW(1.40,-0.84,"なめらかで水平な床",{size:11,col:"#aab3bd",cap:1});
       if(!o.figure){
         P.c.save(); P.c.strokeStyle="#e6b0b0"; P.c.setLineDash([3,3]); P.c.lineWidth=1;
         P.c.beginPath(); P.c.moveTo(P.X(s.Xc),P.Y(yc)); P.c.lineTo(P.X(s.Xc),P.Y(-1.05)); P.c.stroke(); P.c.restore();
         P.jtextW(s.Xc,-1.16, s.hold?"重心":"重心（等速直線運動）",{size:10.5,col:"#c0392b",align:"center"});
       }
       P.spring(s.x1,yc,s.x2,yc,7,6,"#0f7a5a",2);
-      P.ball(s.x1,r1,r1,"#ffe14d",COL.ink,2.2); P.ball(s.x2,r2,r2,"#ffe14d",COL.ink,2.2);
+      if(!o.started) P.jtextW((s.x1+s.x2)/2-0.45,-0.40,"ばね",{size:11.5,col:"#0f7a5a",align:"center",bold:true});
+      P.ball(s.x1,r1,r1,"#fff",COL.ink,2.2); P.ball(s.x2,r2,r2,"#fff",COL.ink,2.2);
       if(!o.figure) P.ball(s.Xc,yc,0.07,"#e02020","#a01010",1.2);
       if(s.hold){ drawHand(P, s.x2, yc, r2, 1);
         P.jtextW(s.x2+r2*2.6,yc+0.62,"手で押さえる",{size:10.5,col:"#8a5a12",align:"center"}); }
       if(o.labels){ P.mtextW(s.x1,yLab,"m",{size:15,align:"center",col:COL.A});
-        P.mtextW(s.x2,yLab,"3m",{size:15,align:"center",col:COL.B}); }
+        P.mtextW(s.x2,yLab,"2m",{size:15,align:"center",col:COL.B}); }
       vArrow(P,s.x1,yV,s.v1,26,"v_1",COL.v,0,true);
       vArrow(P,s.x2,yV,s.v2,26,"v_2",COL.v,0,true);
       if(o.inner!==false && Math.abs(s.u)>0.03){
@@ -1525,15 +1736,15 @@ function SC10(){
       if(o.inner!==false && s.hold && Math.abs(s.u)>0.03){
         const Fh=k*s.u, L=Math.min(52,Math.abs(Fh)*3.6)*(Fh>=0?1:-1);
         P.vec(s.x2+r2,yc,L,0,COL.B,"F",{off:11,lw:2.6,head:9});
-        P.jtextW(s.x2+0.95,yc-0.40,"外力（手が押さえる力）",{size:10.5,col:COL.B,align:"center"});
+        P.jtextW(s.x2+0.95,-0.44,"外力（手が押さえる力）",{size:10.5,col:COL.B,align:"center"});
       }
-      if(o.allForces){ mgArrow(P,s.x1+3/P.s,r1,m1,2.0,"mg"); mgArrow(P,s.x2+3/P.s,r2,m2,2.0,"3mg"); }
+      if(o.allForces){ mgArrow(P,s.x1+3/P.s,r1,m1,2.0,"mg"); mgArrow(P,s.x2+3/P.s,r2,m2,2.0,"2mg"); }
     },
     readout(s,t){ return [{k:MV("v","1"),v:fmt(s.v1,2),u:"m/s"},{k:MV("v","2"),v:fmt(s.v2,2),u:"m/s"},
       {k:"運動量 "+MV("p")+" の和",v:fmt(m1*s.v1+m2*s.v2,2),u:"kg·m/s",wide:1},
       {k:"力学的 "+MV("E")+" の和",v:fmt(.5*m1*s.v1**2+.5*m2*s.v2**2+.5*k*s.u*s.u,2),u:"J",wide:1}];},
     q(s){ const p1=m1*s.v1,p2=m2*s.v2,K1=.5*m1*s.v1*s.v1,K2=.5*m2*s.v2*s.v2,U=.5*k*s.u*s.u;
-      return {p:{parts:[{label:"左 m",col:COL.A,val:p1,mass:m1},{label:"右 3m",col:COL.B,val:p2,mass:m2}],total:p1+p2},
+      return {p:{parts:[{label:"左 m",col:COL.A,val:p1,mass:m1},{label:"右 2m",col:COL.B,val:p2,mass:m2}],total:p1+p2},
               e:{parts:[{label:"左の K",col:COL.A,val:K1},{label:"右の K",col:COL.B,val:K2},
                         {label:"ばねの弾性エネルギー",col:COL.U,val:U}],total:K1+K2+U}};},
     events:[
@@ -1541,7 +1752,7 @@ function SC10(){
        text:"右球を固定している間は、手（外力）が系に力積を与えるので<b>運動量の総和は増えていく</b>（グラフの黒線）。いっぽう固定された球は動かないので外力は仕事をせず、力学的エネルギーは一定のまま。",
        at:(s)=>[(s.x1+s.x2)/2, r2*0.8+1.88]},
       {t0:tH,t1:tEnd,bubT1:tH+0.50,col:COL.C,bub:"固定を外した！",
-       text:"ここから先は外力がない。運動量の総和は $mv_1+3mv_2$ に固定され、<b>重心は右向きに等速直線運動</b>する。ばねの弾性力は内力かつ保存力なので、力学的エネルギーも保存される。",
+       text:"ここから先は外力がない。運動量の総和は $mv_1+2mv_2$ に固定され、<b>重心は右向きに等速直線運動</b>する。ばねの弾性力は内力かつ保存力なので、力学的エネルギーも保存される。",
        at:(s)=>[(s.x1+s.x2)/2, r2*0.8+1.88]}
     ]
   };
@@ -1677,10 +1888,20 @@ function buildPage(){
   </div>
   <p class="howto">問題ごとに ① ② の両方を選ぶと、右側にアニメーションと解説が現れます。</p>`;
 
+  const SHORT={1:"弾性衝突",2:"完全非弾性衝突",3:"摩擦のある板の上をすべる小物体",4:"ばね付きの物体の衝突",
+    5:"分裂",6:"2 次元の衝突",7:"自由に動ける斜め台と小物体",8:"固定された斜め台と小物体",
+    9:"ばねでつないだ 2 球（同質量）",10:"ばねでつないだ 2 球（質量が違い、片側が先に動き出す）"};
+  window.SHORT=SHORT;
+  h+=`<div class="tocbox">
+    <div class="toclabel">■ 目次</div>
+    <div class="toc">${PROBS.map(p=>`<a href="#q${p.n}">問 ${p.n}　${SHORT[p.n]||""}</a>`).join("")}</div>
+    <p class="tocnote">問 1 〜 10 が満点なら、<b>共通テスト 70 点レベル</b>です。</p>
+  </div>`;
+
   PROBS.forEach(p=>{
     h+=`<article class="q" id="q${p.n}">
       <div class="qL">
-        <h2><span class="qnum">問 ${p.n}</span></h2>
+        <h2><span class="qnum">問 ${p.n}</span><span class="qsub">${SHORT[p.n]||""}</span><span class="qpt hidden" id="qpt${p.n}"></span></h2>
         <div class="stmt">${p.stmt}</div>
         <div class="figbox"><canvas id="fig${p.n}"></canvas></div>
         <div class="abline">${p.ab||""}</div>
@@ -1695,7 +1916,7 @@ function buildPage(){
         <div class="stagehost hidden" id="stage${p.n}"></div>
       </div>
       <div class="qR folded" id="right${p.n}">
-        <div class="foldhead">解答・解説（折りたたみ）</div>
+        <div class="foldhead" id="fold${p.n}">解答・解説（折りたたみ）</div>
         <div class="locked" id="lock${p.n}">① と ② を<b>両方えらぶ</b>と、ここにアニメーションと解説が表示されます。</div>
         <div class="foldbody hidden" id="body${p.n}">
           <div id="sim${p.n}"></div>
@@ -1706,6 +1927,13 @@ function buildPage(){
       </div>
     </article>`;
   });
+
+  h+=`<div class="scorebox hidden" id="scorebox">
+    <div class="scoretitle">■ 結果</div>
+    <div class="scorenum" id="scorenum"></div>
+    <div class="scoremsg" id="scoremsg"></div>
+    <div class="scoretbl" id="scoretbl"></div>
+  </div>`;
 
   h+=`<footer>高校物理　運動量保存則と力学的エネルギー保存則の適用範囲　／　単一 HTML・オフライン動作</footer>`;
   wrap.innerHTML=h;
@@ -1773,7 +2001,43 @@ function buildPage(){
     const j=document.getElementById("judge"+n);
     j.innerHTML=(okP&&okE)?'<span class="g">◎ 両方とも正解！</span>'
       :((okP||okE)?'<span class="b">△ どちらか一方が違います。</span>':'<span class="b">× もう一度、解説を読んでみよう。</span>');
+    st.okP=okP; st.okE=okE;
+    const pt=(okP?1:0)+(okE?1:0);
+    const pe=document.getElementById("qpt"+n);
+    if(pe){ pe.classList.remove("hidden");
+      pe.className="qpt p"+pt;
+      pe.innerHTML='<b>'+pt+'</b> 点 / 2 点'; }
+    const fh=document.getElementById("fold"+n);
+    if(fh) fh.textContent="解答・解説";
+    const art=document.getElementById("q"+n);
+    if(art) art.classList.add("done","d"+pt);
     openPanel(prob);
+    updateScore();
+  }
+
+  function updateScore(){
+    const all=PROBS.every(p=>state[p.n].done);
+    const box=document.getElementById("scorebox");
+    if(!all || !box) return;
+    let sum=0;
+    const cells=PROBS.map(p=>{
+      const st=state[p.n], sc=(st.okP?1:0)+(st.okE?1:0); sum+=sc;
+      const cls=sc===2?"s2":(sc===1?"s1":"s0");
+      return `<a class="scell ${cls}" href="#q${p.n}" title="問 ${p.n}へ">問 ${p.n}<b>${sc}</b></a>`;
+    }).join("");
+    document.getElementById("scoretbl").innerHTML=
+      '<span class="scelllab">まちがえた問題の<b>解説</b>をもう一度読んでみよう　→</span>'+cells;
+    document.getElementById("scorenum").innerHTML=
+      `あなたの得点　<b>${sum}</b> <span class="sof">/ 20 点</span>`;
+    const msg=document.getElementById("scoremsg");
+    if(sum===20){ msg.innerHTML='🎉 <b>素晴らしい！</b>努力してますね。共通テスト高得点目指して頑張ろうね！'; msg.className="scoremsg gold"; }
+    else if(sum>=16){ msg.innerHTML='🌸 <b>合格！</b>努力してますね。当たったところも、どうして当たったのか説明できるようになろう'; msg.className="scoremsg pass"; }
+    else if(sum>=11){ msg.innerHTML='💪 <b>惜しい！ファイト！</b>当たったところも、どうして当たったのか説明できるようになろう'; msg.className="scoremsg near"; }
+    else { msg.innerHTML='📘 <b>解説</b>をしっかり読んで、どういう力がはたらいているのか（内力か外力か・保存力か非保存力か）を考える癖をつけよう。（16 点以上で合格）'; msg.className="scoremsg more"; }
+    if(box.classList.contains("hidden")){
+      box.classList.remove("hidden");
+      setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"center"}),300);
+    }
   }
   function alignStage(n){
     const host=document.getElementById("stage"+n);
@@ -2012,14 +2276,14 @@ PROBS.push(
 {
   n:9, scene:SC9, eNote:true,
   stmt:`
-    <p>なめらかで水平な台の上に、軽いばねの両端に取りつけられた質量 $m$ の 2 つの小球がある。
+    <p>なめらかで水平な床の上に、軽いばねの両端に取りつけられた質量 $m$ の 2 つの小球がある。
     ばねが自然長のときの位置から、2 つの小球を<b>左右に同じ長さだけ</b>引き離して、静かに同時に手を放す。</p>`,
   ab:"<span>(a) 手を放した直後</span><span>(b) ばねが自然長になったとき</span><span style='margin-right:0'>を比べたとき、</span>",
   ans:{p:"yes", e:"yes"},
   opts:{p:["yes","no"], e:["yes","no"]},
   exp:`
     <h3>① 運動量の総和 … <span style="color:#1c8f4a">保存される</span></h3>
-    <p>2 球を引き合うばねの力は<b>内力</b>。台はなめらかで、水平方向の外力はない。
+    <p>2 球を引き合うばねの力は<b>内力</b>。床はなめらかで、水平方向の外力はない。
     はじめ静止しているので、運動量の総和はつねに $0$ である。</p>
     <div class="eq">$$0=m v_1+m v_2 \\quad\\Longrightarrow\\quad v_2=-v_1$$</div>
     <p>2 球はつねに逆向きに同じ速さで動き、<b>重心は動かない</b>。</p>
@@ -2037,8 +2301,8 @@ PROBS.push(
 {
   n:10, scene:SC10, eNote:true,
   stmt:`
-    <p>なめらかで水平な台の上に、軽いばねの両端に取りつけられた 2 つの小球がある。
-    左の小球の質量は $m$、右の小球の質量は $3m$ である。
+    <p>なめらかで水平な床の上に、軽いばねの両端に取りつけられた 2 つの小球がある。
+    左の小球の質量は $m$、右の小球の質量は $2m$ である。
     右の小球はそのままにして、左の小球だけを左へ引いてばねを自然長より伸ばし、
     <b>まず左手から手を放し、のちに右の小球の固定を外す</b>。</p>`,
   ab:"<span>(a) 右の小球の固定を外した直後</span><span>(b) ばねが最も縮んだとき</span><span style='margin-right:0'>を比べたとき、</span>",
@@ -2048,11 +2312,11 @@ PROBS.push(
     <h3>① 運動量の総和 … <span style="color:#1c8f4a">保存される</span></h3>
     <p>右の小球の固定を外したあとは、2 球にはたらく水平方向の力はばねの弾性力（<b>内力</b>）だけになる。
     したがって (a) と (b) の間で運動量の総和は変わらない。</p>
-    <div class="eq">$$m v_1 + 3m v_2 = \\text{一定}\;(\\neq 0)$$</div>
+    <div class="eq">$$m v_1 + 2m v_2 = \\text{一定}\;(\\neq 0)$$</div>
     <p>ここが問 9 との大きな違いである。問 9 では総和が $0$ だったので<b>重心は静止</b>していたが、
     この問題では左の小球が<b>先に動き出して</b>いるため、固定を外した瞬間にはすでに右向きの運動量をもっている。
     そのため総和は $0$ ではなく、</p>
-    <div class="eq">$$V_{\\text{重心}}=\\frac{m v_1 + 3m v_2}{m+3m}=\\text{一定}$$</div>
+    <div class="eq">$$V_{\\text{重心}}=\\frac{m v_1 + 2m v_2}{m+2m}=\\text{一定}$$</div>
     <p>すなわち<b>重心は右向きに等速直線運動</b>していく。
     2 球はその重心のまわりで伸び縮みをくり返しながら、全体として右へ進む。</p>
     <div class="warn"><b>固定を外す前（アニメーションの前半）</b>は、右の小球を押さえる手が<b>外力</b>としてはたらいている。
@@ -2060,8 +2324,8 @@ PROBS.push(
     「運動量が保存されるのは外力の力積がないときだけ」ということが、前半と後半の対比でよく分かる。</div>
 
     <h3>② 力学的エネルギーの総和 … <span style="color:#1c8f4a">保存される</span></h3>
-    <p>ばねの弾性力は<b>保存力</b>で、台はなめらかである。</p>
-    <div class="eq">$$\\tfrac12 k x^{2}+\\tfrac12 m v_1^{2}+\\tfrac12 (3m) v_2^{2}=\\text{一定}$$</div>
+    <p>ばねの弾性力は<b>保存力</b>で、床はなめらかである。</p>
+    <div class="eq">$$\\tfrac12 k x^{2}+\\tfrac12 m v_1^{2}+\\tfrac12 (2m) v_2^{2}=\\text{一定}$$</div>
     <p>なお、固定を外す前も、押さえている小球は<b>動かない</b>ので外力は仕事をしない。
     したがって力学的エネルギーははじめからずっと一定である。</p>
     <div class="concl">結論：① 保存される　② 保存される。<br>
